@@ -1,0 +1,41 @@
+import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: path.resolve(__dirname, '.env.local'), override: true });
+
+const baseURL = process.env.BASE_URL!;
+
+export default defineConfig({
+    testDir: './tests',
+    outputDir: './test-results',
+    fullyParallel: true,
+    forbidOnly: !!process.env.CI,
+    retries: process.env.CI ? 2 : 0,
+    workers: 4,
+    timeout: 60_000,
+    reporter: process.env.CI
+        ? [['junit', { outputFile: 'test-reports/results.xml' }], ['html', { open: 'never' }]]
+        : [['list'], ['html', { open: 'on-failure' }]],
+    use: {
+        baseURL,
+        navigationTimeout: 60_000,
+        trace: process.env.CI ? 'on' : 'retain-on-failure',
+        screenshot: 'only-on-failure',
+    },
+    projects: [
+        { name: 'setup', testMatch: /.*\.setup\.ts/ },
+        {
+            name: 'chromium',
+            testMatch: /dashboard\.spec\.ts/,
+            use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+            dependencies: ['setup'],
+        },
+        {
+            name: 'public',
+            testMatch: /public\.spec\.ts/,
+            use: { ...devices['Desktop Chrome'] },
+        },
+    ],
+});

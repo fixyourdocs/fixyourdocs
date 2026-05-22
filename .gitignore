@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+e2e/node_modules/
+
+# Build output
+dist
+.turbo
+*.tsbuildinfo
+coverage
+
+# Env files
+.env.local
+.env.production
+.env.*.local
+e2e/.env.local
+
+# CDK
+cdk.out
+cdk.context.json
+
+# Runtime-generated assets
+frontend/public/env.js
+
+# Playwright artifacts
+e2e/playwright/.auth/
+e2e/test-results/
+e2e/test-reports/
+e2e/playwright-report/
+
+# Logs and OS
+*.log
+.DS_Store
