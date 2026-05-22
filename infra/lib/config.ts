@@ -16,7 +16,7 @@ export interface Config {
   cognitoDomainPrefix: string;
 }
 
-const rootDomain = process.env.FYD_ROOT_DOMAIN ?? 'fixyourdocs.org';
+const rootDomain = process.env.FYD_ROOT_DOMAIN ?? 'fixyourdocs.io';
 const account = process.env.CDK_DEFAULT_ACCOUNT ?? process.env.FYD_AWS_ACCOUNT ?? '';
 
 export const config: Config = {

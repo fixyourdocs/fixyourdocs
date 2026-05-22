@@ -30,7 +30,7 @@ export function Dashboard() {
         <Card>
           <CardBody>
             <p className="text-sm font-medium text-slate-700">MCP endpoint</p>
-            <p className="mt-1 break-all text-sm font-mono text-slate-500">https://mcp.fixyourdocs.org/mcp</p>
+            <p className="mt-1 break-all text-sm font-mono text-slate-500">https://mcp.fixyourdocs.io/mcp</p>
             <p className="mt-2 text-xs text-slate-500">Any MCP-aware agent can file reports against your verified domains.</p>
           </CardBody>
         </Card>

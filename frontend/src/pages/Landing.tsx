@@ -9,7 +9,7 @@ const MCP_CONFIG = `{
     "fixyourdocs": {
       "transport": {
         "type": "http",
-        "url": "https://mcp.fixyourdocs.org/mcp"
+        "url": "https://mcp.fixyourdocs.io/mcp"
       }
     }
   }
@@ -109,7 +109,7 @@ function ForAgents() {
           <p className="mt-3 text-sm text-slate-600">
             Endpoint:{' '}
             <code className="block break-all rounded bg-white p-2 font-mono text-xs ring-1 ring-slate-200">
-              https://mcp.fixyourdocs.org/mcp
+              https://mcp.fixyourdocs.io/mcp
             </code>
           </p>
         </div>

@@ -16,14 +16,14 @@ export interface RuntimeEnv {
 }
 
 const fallback: RuntimeEnv = {
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? 'https://api.fixyourdocs.org',
-  MCP_BASE_URL: import.meta.env.VITE_MCP_BASE_URL ?? 'https://mcp.fixyourdocs.org',
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? 'https://api.fixyourdocs.io',
+  MCP_BASE_URL: import.meta.env.VITE_MCP_BASE_URL ?? 'https://mcp.fixyourdocs.io',
   COGNITO_AUTHORITY: import.meta.env.VITE_COGNITO_AUTHORITY ?? '',
   COGNITO_CLIENT_ID: import.meta.env.VITE_COGNITO_CLIENT_ID ?? '',
-  COGNITO_DOMAIN: import.meta.env.VITE_COGNITO_DOMAIN ?? 'https://auth.fixyourdocs.org',
+  COGNITO_DOMAIN: import.meta.env.VITE_COGNITO_DOMAIN ?? 'https://auth.fixyourdocs.io',
   COGNITO_REDIRECT_URI: import.meta.env.VITE_COGNITO_REDIRECT_URI ?? 'http://localhost:5173/auth/callback',
   COGNITO_LOGOUT_URI: import.meta.env.VITE_COGNITO_LOGOUT_URI ?? 'http://localhost:5173/',
-  PUBLIC_BASE_URL: import.meta.env.VITE_PUBLIC_BASE_URL ?? 'https://fixyourdocs.org',
+  PUBLIC_BASE_URL: import.meta.env.VITE_PUBLIC_BASE_URL ?? 'https://fixyourdocs.io',
 };
 
 export const env: RuntimeEnv = { ...fallback, ...(typeof window !== 'undefined' ? window.__ENV__ ?? {} : {}) };

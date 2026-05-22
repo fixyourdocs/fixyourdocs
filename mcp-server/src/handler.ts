@@ -22,7 +22,7 @@ const TABLES = {
   reports: process.env.REPORTS_TABLE!,
   rateLimit: process.env.RATE_LIMIT_TABLE!,
 };
-const ROOT_DOMAIN = process.env.ROOT_DOMAIN ?? 'fixyourdocs.org';
+const ROOT_DOMAIN = process.env.ROOT_DOMAIN ?? 'fixyourdocs.io';
 const APP_BASE_URL = process.env.APP_BASE_URL ?? `https://${ROOT_DOMAIN}`;
 const IP_HASH_SALT_PARAM = process.env.IP_HASH_SALT_PARAM!;
 

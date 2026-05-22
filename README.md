@@ -54,7 +54,7 @@ The CDK app reads all account-specific values from environment variables — not
 |---|---|---|
 | `CDK_DEFAULT_ACCOUNT` (or `FYD_AWS_ACCOUNT`) | yes | Target AWS account ID. |
 | `CDK_DEFAULT_REGION` (or `FYD_AWS_REGION`) | no | Defaults to `us-east-1`. Don't change unless you understand the CloudFront cert constraint. |
-| `FYD_ROOT_DOMAIN` | no | Defaults to `fixyourdocs.org`. The SPA, API, MCP, and Cognito callback URLs derive from it. |
+| `FYD_ROOT_DOMAIN` | no | Defaults to `fixyourdocs.io`. The SPA, API, MCP, and Cognito callback URLs derive from it. |
 | `FYD_HOSTED_ZONE_ID` | yes | Route 53 hosted zone ID for `FYD_ROOT_DOMAIN`. |
 | `FYD_OPS_ALERT_EMAIL` | yes | Subscribed to CloudWatch alarms + billing budget. |
 | `FYD_GITHUB_REPO` | no | `org/repo` allowed to assume the OIDC deploy role. Defaults to `fixyourdocs/fixyourdocs`. |
@@ -81,7 +81,7 @@ If you just want to point an agent at the live service rather than self-host, ad
     "fixyourdocs": {
       "transport": {
         "type": "http",
-        "url": "https://mcp.fixyourdocs.org/mcp"
+        "url": "https://mcp.fixyourdocs.io/mcp"
       }
     }
   }
