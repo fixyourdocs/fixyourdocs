@@ -1,0 +1,25 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 20, cache: pnpm }
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm rebuild esbuild
+      - run: pnpm -r typecheck
+      - run: pnpm --filter @fyd/frontend build
+      - run: pnpm --filter @fyd/infra cdk deploy --all --require-approval never
