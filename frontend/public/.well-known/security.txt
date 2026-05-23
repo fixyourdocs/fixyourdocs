@@ -1,0 +1,3 @@
+Contact: mailto:hello@fixyourdocs.io
+Expires: 2027-05-23T00:00:00Z
+Preferred-Languages: en
