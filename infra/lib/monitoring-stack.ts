@@ -19,7 +19,9 @@ export class MonitoringStack extends Stack {
     const { config, httpApi } = props;
 
     const topic = new Topic(this, 'OpsAlerts', { topicName: 'fyd-ops-alerts' });
-    topic.addSubscription(new EmailSubscription(config.opsAlertEmail));
+    if (config.opsAlertEmail) {
+      topic.addSubscription(new EmailSubscription(config.opsAlertEmail));
+    }
 
     const apiId = httpApi.apiId;
 
@@ -39,24 +41,26 @@ export class MonitoringStack extends Stack {
       treatMissingData: TreatMissingData.NOT_BREACHING,
     }).addAlarmAction(new SnsAction(topic));
 
-    new CfnBudget(this, 'MonthlyBudget', {
-      budget: {
-        budgetType: 'COST',
-        timeUnit: 'MONTHLY',
-        budgetLimit: { amount: 30, unit: 'USD' },
-        budgetName: 'fyd-monthly',
-      },
-      notificationsWithSubscribers: [
-        {
-          notification: {
-            notificationType: 'ACTUAL',
-            comparisonOperator: 'GREATER_THAN',
-            threshold: 80,
-            thresholdType: 'PERCENTAGE',
-          },
-          subscribers: [{ subscriptionType: 'EMAIL', address: config.opsAlertEmail }],
+    if (config.opsAlertEmail) {
+      new CfnBudget(this, 'MonthlyBudget', {
+        budget: {
+          budgetType: 'COST',
+          timeUnit: 'MONTHLY',
+          budgetLimit: { amount: 30, unit: 'USD' },
+          budgetName: 'fyd-monthly',
         },
-      ],
-    });
+        notificationsWithSubscribers: [
+          {
+            notification: {
+              notificationType: 'ACTUAL',
+              comparisonOperator: 'GREATER_THAN',
+              threshold: 80,
+              thresholdType: 'PERCENTAGE',
+            },
+            subscribers: [{ subscriptionType: 'EMAIL', address: config.opsAlertEmail }],
+          },
+        ],
+      });
+    }
   }
 }
