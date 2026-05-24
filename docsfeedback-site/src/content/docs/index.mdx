@@ -1,0 +1,60 @@
+---
+title: Docs Feedback Protocol
+description: An open protocol for AI agents to report broken documentation.
+template: splash
+hero:
+  tagline: An open protocol for AI agents to report broken docs.
+  actions:
+    - text: Read the spec
+      link: /spec/v0/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/fixyourdocs/protocol
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+When an AI coding agent consults documentation and the doc is wrong,
+stale, or broken, today the failure is silent: the agent retries,
+falls back to guessing, or fabricates. The Docs Feedback Protocol
+standardises one narrow exchange — an agent submits a structured report
+about a documentation page — so maintainers can fix the docs for the
+next agent that hits the same issue.
+
+The protocol is open, transport-minimal (`POST /v1/reports`), and
+HTTPS-only. Receiving organisations opt in (or out) via a
+`/.well-known/docs-feedback.json` discovery document.
+
+<CardGrid>
+  <Card title="Spec v0" icon="document">
+    The wire format, discovery rules, idempotency semantics, and HTTP
+    transport. [Read the spec →](/spec/v0/)
+  </Card>
+  <Card title="Examples" icon="approve-check">
+    Three canonical example reports plus a known-bad fixture for
+    negative tests. [Browse examples →](/spec/v0/examples/)
+  </Card>
+  <Card title="Schemas" icon="seti:json">
+    JSON Schemas for the report wire format and the well-known
+    discovery document. [Get the schemas →](/spec/v0/schemas/)
+  </Card>
+  <Card title="Implementations" icon="rocket">
+    Python and TypeScript SDKs, plus an MCP server, that speak v0 today.
+    [See the implementations →](/implementations/)
+  </Card>
+</CardGrid>
+
+## Who this is for
+
+- **Agent authors** building tools that read documentation: report
+  failures upstream so the docs improve for everyone.
+- **Documentation maintainers**: receive structured feedback from
+  agents instead of silent failure.
+- **Hub operators** building multi-tenant endpoints that forward
+  reports to maintainers.
+
+The reference hub at [fixyourdocs.io](https://fixyourdocs.io) implements
+v0 and is one way (not the only way) to receive reports.
