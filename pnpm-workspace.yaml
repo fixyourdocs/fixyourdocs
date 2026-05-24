@@ -4,3 +4,4 @@ packages:
   - mcp-server
   - frontend
   - e2e
+  - docsfeedback-site

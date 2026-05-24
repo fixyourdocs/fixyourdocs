@@ -1,0 +1,54 @@
+---
+title: Contributing
+description: How to contribute to the Docs Feedback Protocol — DCO, CLA, and how to propose changes.
+---
+
+The Docs Feedback Protocol is developed in the open at
+[github.com/fixyourdocs/protocol](https://github.com/fixyourdocs/protocol).
+Issues and pull requests against the spec, schemas, and examples are
+welcome.
+
+## Developer Certificate of Origin
+
+Every commit must be signed off with a Developer Certificate of Origin
+line. The DCO is a lightweight assertion that you wrote the
+contribution or otherwise have the right to submit it under the
+project's licence. See the full text and rationale on
+[kernel.org](https://www.kernel.org/doc/html/latest/process/submitting-patches.html#sign-your-work-the-developer-s-certificate-of-origin).
+
+Sign off your commits with `git commit -s`. Git will append:
+
+```
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+## Contributor License Agreement
+
+In addition to the DCO, every contributor must sign the FixYourDocs
+Individual Contributor License Agreement (based on the Apache ICLA
+v2.2) the first time they open a pull request. The CLA-assistant bot
+will comment on your PR with a one-click sign-off link.
+
+The CLA text lives at
+[github.com/fixyourdocs/.github/blob/main/CLA.md](https://github.com/fixyourdocs/.github/blob/main/CLA.md).
+
+## How to propose a change
+
+1. Open an issue first if the change is non-trivial — the editors will
+   confirm scope before you spend time on a PR.
+2. Spec prose changes go to `spec/v0/README.md`. Schema changes go to
+   the matching file under `schema/v0/`. Keep prose and schema in
+   sync; the schema is normative.
+3. v0 is the stable wire format. Field renames, removals, or
+   non-additive changes require a new major version (see the spec's
+   §8). Backwards-compatible extensions land via capability tokens.
+
+See [`CONTRIBUTING.md`](https://github.com/fixyourdocs/protocol/blob/main/CONTRIBUTING.md)
+in the protocol repo for the full contribution guide.
+
+## Licence
+
+The prose in the protocol spec is licensed under
+[CC BY 4.0](https://github.com/fixyourdocs/protocol/blob/main/LICENSE.spec).
+The JSON Schema artefacts and code samples are licensed under
+[Apache 2.0](https://github.com/fixyourdocs/protocol/blob/main/LICENSE).

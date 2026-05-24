@@ -8,6 +8,7 @@ import { ApiStack } from '../lib/api-stack';
 import { FrontendStack } from '../lib/frontend-stack';
 import { MonitoringStack } from '../lib/monitoring-stack';
 import { GithubOidcStack } from '../lib/github-oidc-stack';
+import { DocsfeedbackStack } from '../lib/docsfeedback-stack';
 
 const app = new App();
 const { stackPrefix: p } = config;
@@ -53,5 +54,10 @@ new MonitoringStack(app, `${p}MonitoringStack`, {
 }).addDependency(api);
 
 new GithubOidcStack(app, `${p}GithubOidcStack`, { env, config });
+
+new DocsfeedbackStack(app, `${p}DocsfeedbackStack`, {
+  env,
+  hostedZoneId: config.docsfeedbackHostedZoneId,
+});
 
 app.synth();

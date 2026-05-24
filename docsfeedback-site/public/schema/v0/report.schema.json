@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docsfeedback.org/schema/v0/report.schema.json",
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "title": "Docs Feedback Report",
+  "description": "Wire format for a report submitted by an AI agent against a documentation page. POST to a receiving organisation's /v1/reports endpoint. See spec/v0/README.md for the prose specification.",
+  "type": "object",
+  "required": ["protocol_version", "doc_url", "agent", "report"],
+  "additionalProperties": false,
+  "properties": {
+    "$comment": {
+      "description": "Tooling-only field reserved for inline comments such as SPDX headers. Servers SHOULD ignore it and MUST NOT treat it as part of the report semantics.",
+      "type": "string",
+      "maxLength": 256
+    },
+    "protocol_version": {
+      "description": "Major spec version this body conforms to. v0 servers MUST reject any value other than \"0\".",
+      "type": "string",
+      "const": "0"
+    },
+    "doc_url": {
+      "description": "URL of the documentation page the report is about, as the agent observed it. The server canonicalises before dedup; see §4.3.",
+      "type": "string",
+      "format": "uri",
+      "maxLength": 2048
+    },
+    "agent": {
+      "description": "Identification of the agent that produced the report.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Stable identifier for the agent product, lowercase kebab-case by convention (e.g. \"claude-code\", \"cursor\", \"aider\").",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+        },
+        "version": {
+          "description": "Optional version string in whatever format the agent uses (semver, calendar version, build ID). Free-form.",
+          "type": "string",
+          "maxLength": 64
+        },
+        "vendor": {
+          "description": "Optional human-readable name of the organisation behind the agent.",
+          "type": "string",
+          "maxLength": 128
+        }
+      }
+    },
+    "report": {
+      "description": "The substance of the feedback.",
+      "type": "object",
+      "required": ["kind", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "Category of the issue.",
+          "type": "string",
+          "enum": ["broken", "incorrect", "outdated", "missing", "unclear", "other"]
+        },
+        "summary": {
+          "description": "One-line description of the problem. Plain text, no markdown.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "details": {
+          "description": "Longer prose body, CommonMark. Optional.",
+          "type": "string",
+          "maxLength": 8000
+        },
+        "evidence": {
+          "description": "Concrete evidence supporting the report. Optional but RECOMMENDED.",
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "required": ["kind", "text"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["error_message", "attempted_action", "expected", "observed", "code_snippet", "quote"]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              }
+            }
+          }
+        },
+        "suggested_fix": {
+          "description": "Optional concrete suggestion, CommonMark.",
+          "type": "string",
+          "maxLength": 4000
+        }
+      }
+    },
+    "task_context": {
+      "description": "Optional context about the agent task that surfaced the issue.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task_summary": {
+          "description": "One-line description of what the agent was trying to do.",
+          "type": "string",
+          "maxLength": 500
+        },
+        "transcript_excerpt": {
+          "description": "Optional redacted excerpt of the agent's transcript or scratchpad. Agents MUST strip secrets and user PII before submission.",
+          "type": "string",
+          "maxLength": 4000
+        }
+      }
+    },
+    "idempotency_key": {
+      "description": "Client-supplied dedup key. If absent, the server computes a default (see §6). If both this field and the Idempotency-Key header are present and conflict, the header wins. ASCII-printable, case-sensitive.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[\\x21-\\x7e]+$"
+    },
+    "submitted_at": {
+      "description": "RFC 3339 timestamp of the agent's clock at submission. Informational only.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "locale": {
+      "description": "BCP-47 language tag of the report body. Defaults to \"en\".",
+      "type": "string",
+      "maxLength": 35,
+      "pattern": "^[A-Za-z]{1,8}(-[A-Za-z0-9]{1,8})*$"
+    },
+    "client_capabilities": {
+      "description": "Optional list of capability tokens the client implements. Reserved for v0.x and v1. See §8.",
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$",
+        "maxLength": 64
+      }
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docsfeedback.org/schema/v0/well-known.schema.json",
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "title": "Docs Feedback well-known document",
+  "description": "Shape of /.well-known/docs-feedback.json — the discovery document a docs-publishing organisation hosts to advertise (or refuse) docs-feedback reports under v0. See spec/v0/README.md §5.",
+  "type": "object",
+  "required": ["protocol_version", "opt_in"],
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "description": "Major spec version. v0 documents MUST set this to \"0\".",
+      "type": "string",
+      "const": "0"
+    },
+    "opt_in": {
+      "description": "True if this organisation accepts v0 reports. False is an explicit opt-out and MUST be honoured by clients.",
+      "type": "boolean"
+    },
+    "endpoint": {
+      "description": "Absolute https URL that accepts POST /v1/reports. REQUIRED when opt_in is true; SHOULD be absent when opt_in is false.",
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "accepts": {
+      "description": "Optional whitelist of report.kind values this endpoint accepts. If absent, all v0 kinds are accepted.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["broken", "incorrect", "outdated", "missing", "unclear", "other"]
+      }
+    },
+    "doc_domains": {
+      "description": "Optional list of host names this opt-in applies to. If absent, the opt-in covers the host this document was fetched from.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "hostname",
+        "maxLength": 253
+      }
+    },
+    "policy_url": {
+      "description": "Optional URL of a human-readable policy describing how the organisation handles received reports.",
+      "type": "string",
+      "format": "uri"
+    },
+    "contact": {
+      "description": "Optional public contact (URL or mailto:) for protocol questions.",
+      "type": "string",
+      "format": "uri",
+      "maxLength": 256
+    },
+    "since": {
+      "description": "RFC 3339 timestamp the opt-in or opt-out took effect. Informational.",
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "opt_in": { "const": true } } },
+      "then": { "required": ["endpoint"] }
+    }
+  ]
+}

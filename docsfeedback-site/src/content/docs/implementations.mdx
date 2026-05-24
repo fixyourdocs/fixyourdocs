@@ -1,0 +1,93 @@
+---
+title: Implementations
+description: Libraries and tools that implement the Docs Feedback Protocol v0.
+---
+
+The protocol is small enough to implement directly against the
+[JSON Schema](/spec/v0/schemas/) and the
+[HTTP transport](/spec/v0/#7-http-transport). The official client
+libraries and the MCP server below are reference implementations.
+
+## Python
+
+```sh
+pip install fixyourdocs
+```
+
+Source: [github.com/fixyourdocs/sdk-python](https://github.com/fixyourdocs/sdk-python).
+Distribution: [PyPI](https://pypi.org/project/fixyourdocs/).
+
+```python
+from fixyourdocs import Client
+
+client = Client(endpoint="https://hub.fixyourdocs.io/v1/reports")
+client.submit(
+    doc_url="https://docs.example.com/sso/setup",
+    agent={"name": "claude-code"},
+    report={
+        "kind": "outdated",
+        "summary": "Step 4 references a 'Save and Apply' button that no longer exists.",
+    },
+)
+```
+
+## TypeScript
+
+```sh
+npm install @fixyourdocs/sdk
+```
+
+Source: [github.com/fixyourdocs/sdk-typescript](https://github.com/fixyourdocs/sdk-typescript).
+Distribution: [npm](https://www.npmjs.com/package/@fixyourdocs/sdk).
+
+```ts
+import { Client } from '@fixyourdocs/sdk';
+
+const client = new Client({ endpoint: 'https://hub.fixyourdocs.io/v1/reports' });
+await client.submit({
+  doc_url: 'https://docs.example.com/sso/setup',
+  agent: { name: 'claude-code' },
+  report: {
+    kind: 'outdated',
+    summary: "Step 4 references a 'Save and Apply' button that no longer exists.",
+  },
+});
+```
+
+## MCP server
+
+A Model Context Protocol server that exposes a single `report_docs`
+tool. Agents that already speak MCP can submit reports without writing
+HTTP code.
+
+Source and install instructions:
+[github.com/fixyourdocs/fixyourdocs/tree/main/mcp-server](https://github.com/fixyourdocs/fixyourdocs/tree/main/mcp-server).
+
+## Reference hub
+
+[hub.fixyourdocs.io](https://hub.fixyourdocs.io) is a multi-tenant
+endpoint operated by the FixYourDocs project. It accepts v0 reports for
+any docs domain and forwards them to maintainers who have claimed the
+domain on [fixyourdocs.io](https://fixyourdocs.io).
+
+Anyone can run their own endpoint — the protocol does not require
+using this hub.
+
+## Curl
+
+For agents without a client library, a raw HTTP submission works:
+
+```sh
+curl -X POST https://hub.fixyourdocs.io/v1/reports \
+  -H 'Content-Type: application/json' \
+  -H 'X-Docs-Feedback-Protocol-Version: 0' \
+  -d '{
+    "protocol_version": "0",
+    "doc_url": "https://docs.example.com/sso/setup",
+    "agent":   { "name": "claude-code" },
+    "report":  {
+      "kind":    "outdated",
+      "summary": "Step 4 references a button that no longer exists."
+    }
+  }'
+```

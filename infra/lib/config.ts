@@ -3,6 +3,7 @@ export interface Config {
   region: string;
   rootDomain: string;
   hostedZoneId: string;
+  docsfeedbackHostedZoneId: string;
   subdomains: {
     app: string;
     api: string;
@@ -24,6 +25,7 @@ export const config: Config = {
   region: process.env.CDK_DEFAULT_REGION ?? process.env.FYD_AWS_REGION ?? 'us-east-1',
   rootDomain,
   hostedZoneId: process.env.FYD_HOSTED_ZONE_ID ?? '',
+  docsfeedbackHostedZoneId: process.env.FYD_DOCSFEEDBACK_HOSTED_ZONE_ID ?? '',
   subdomains: {
     app: rootDomain,
     api: `api.${rootDomain}`,
