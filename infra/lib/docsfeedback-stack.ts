@@ -12,6 +12,9 @@ import {
   PriceClass,
   AllowedMethods,
   CachedMethods,
+  Function as CloudFrontFunction,
+  FunctionCode,
+  FunctionEventType,
 } from 'aws-cdk-lib/aws-cloudfront';
 import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
@@ -72,6 +75,25 @@ export class DocsfeedbackStack extends Stack {
       },
     });
 
+    // CloudFront's `defaultRootObject` only rewrites the apex. For
+    // subdirectory routes like `/spec/v0/` to resolve, we need a viewer-
+    // request function that appends `index.html` to directory-style URIs.
+    const indexRewrite = new CloudFrontFunction(this, 'IndexRewrite', {
+      code: FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+  if (uri.endsWith('/')) {
+    request.uri = uri + 'index.html';
+  } else if (uri.lastIndexOf('.') < uri.lastIndexOf('/')) {
+    // No file extension after the last slash → treat as directory route.
+    request.uri = uri + '/index.html';
+  }
+  return request;
+}
+      `.trim()),
+    });
+
     this.distribution = new Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
       domainNames: [ROOT_DOMAIN, WWW_DOMAIN],
@@ -85,6 +107,12 @@ export class DocsfeedbackStack extends Stack {
         allowedMethods: AllowedMethods.ALLOW_GET_HEAD,
         cachedMethods: CachedMethods.CACHE_GET_HEAD,
         compress: true,
+        functionAssociations: [
+          {
+            function: indexRewrite,
+            eventType: FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
       },
     });
 
