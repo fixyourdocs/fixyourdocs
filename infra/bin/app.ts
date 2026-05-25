@@ -21,14 +21,11 @@ const api = new ApiStack(app, `${p}ApiStack`, {
   env,
   config,
   hostedZone: network.hostedZone,
-  certApi: network.certApi,
+  cert: network.cert,
   userPool: auth.userPool,
   userPoolClient: auth.userPoolClient,
-  orgsTable: data.orgsTable,
-  membershipsTable: data.membershipsTable,
-  domainsTable: data.domainsTable,
   reportsTable: data.reportsTable,
-  repliesTable: data.repliesTable,
+  integrationsTable: data.integrationsTable,
   rateLimitTable: data.rateLimitTable,
 });
 api.addDependency(network);
@@ -39,10 +36,9 @@ const frontend = new FrontendStack(app, `${p}FrontendStack`, {
   env,
   config,
   hostedZone: network.hostedZone,
-  certApi: network.certApi,
+  cert: network.cert,
   userPoolId: auth.userPool.userPoolId,
   userPoolClientId: auth.userPoolClient.userPoolClientId,
-  cognitoDomainUrl: auth.userPoolDomain.baseUrl(),
 });
 frontend.addDependency(network);
 frontend.addDependency(auth);

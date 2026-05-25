@@ -3,11 +3,8 @@ import { Construct } from 'constructs';
 import {
   AccountRecovery,
   Mfa,
-  OAuthScope,
   UserPool,
   UserPoolClient,
-  UserPoolClientIdentityProvider,
-  UserPoolDomain,
 } from 'aws-cdk-lib/aws-cognito';
 import { Config } from './config';
 
@@ -18,12 +15,11 @@ export interface AuthStackProps extends StackProps {
 export class AuthStack extends Stack {
   readonly userPool: UserPool;
   readonly userPoolClient: UserPoolClient;
-  readonly userPoolDomain: UserPoolDomain;
 
   constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, props);
 
-    const { config } = props;
+    void props.config;
 
     this.userPool = new UserPool(this, 'UserPool', {
       userPoolName: 'fyd-users',
@@ -45,6 +41,10 @@ export class AuthStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
 
+    // SRP-only client; no Hosted UI redirect flow. The SPA signs users in via
+    // `amazon-cognito-identity-js` directly against the user pool. The
+    // optional GitHub OAuth sign-in path (P0-08 Step 4b) is implemented inside
+    // the Hub backend, not via Cognito federated identity providers.
     this.userPoolClient = new UserPoolClient(this, 'WebClient', {
       userPool: this.userPool,
       userPoolClientName: 'fyd-web',
@@ -54,36 +54,12 @@ export class AuthStack extends Stack {
       accessTokenValidity: Duration.hours(1),
       idTokenValidity: Duration.hours(1),
       refreshTokenValidity: Duration.days(30),
-      supportedIdentityProviders: [UserPoolClientIdentityProvider.COGNITO],
-      oAuth: {
-        flows: { authorizationCodeGrant: true },
-        scopes: [OAuthScope.OPENID, OAuthScope.EMAIL, OAuthScope.PROFILE],
-        callbackUrls: [
-          `https://${config.subdomains.app}/auth/callback`,
-          'http://localhost:5173/auth/callback',
-        ],
-        logoutUrls: [
-          `https://${config.subdomains.app}/`,
-          'http://localhost:5173/',
-        ],
-      },
-    });
-
-    // Use Cognito-managed prefix domain instead of a custom auth.* subdomain.
-    // Avoids the chicken-and-egg with the apex A record required by Cognito's
-    // custom-domain check. We can switch to a custom domain in V2.
-    this.userPoolDomain = new UserPoolDomain(this, 'UserPoolPrefixDomain', {
-      userPool: this.userPool,
-      cognitoDomain: { domainPrefix: config.cognitoDomainPrefix },
     });
 
     new CfnOutput(this, 'UserPoolId', { value: this.userPool.userPoolId });
     new CfnOutput(this, 'UserPoolClientId', { value: this.userPoolClient.userPoolClientId });
     new CfnOutput(this, 'CognitoAuthority', {
-      value: `https://cognito-idp.${config.region}.amazonaws.com/${this.userPool.userPoolId}`,
-    });
-    new CfnOutput(this, 'CognitoDomain', {
-      value: this.userPoolDomain.baseUrl(),
+      value: `https://cognito-idp.${this.region}.amazonaws.com/${this.userPool.userPoolId}`,
     });
   }
 }

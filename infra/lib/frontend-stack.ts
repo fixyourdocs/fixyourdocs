@@ -25,10 +25,9 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 export interface FrontendStackProps extends StackProps {
   config: Config;
   hostedZone: IHostedZone;
-  certApi: ICertificate;
+  cert: ICertificate;
   userPoolId: string;
   userPoolClientId: string;
-  cognitoDomainUrl: string;
 }
 
 export class FrontendStack extends Stack {
@@ -68,7 +67,7 @@ export class FrontendStack extends Stack {
     this.distribution = new Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
       domainNames: [config.subdomains.app, `www.${config.subdomains.app}`],
-      certificate: props.certApi,
+      certificate: props.cert,
       priceClass: PriceClass.PRICE_CLASS_100,
       defaultBehavior: {
         origin: S3BucketOrigin.withOriginAccessControl(this.bucket),
@@ -100,14 +99,11 @@ export class FrontendStack extends Stack {
 
     const envJs = [
       'window.__ENV__ = {',
-      `  API_BASE_URL: 'https://${config.subdomains.api}',`,
-      `  MCP_BASE_URL: 'https://${config.subdomains.mcp}',`,
-      `  COGNITO_AUTHORITY: 'https://cognito-idp.${config.region}.amazonaws.com/${props.userPoolId}',`,
+      `  HUB_BASE_URL: 'https://${config.subdomains.hub}',`,
+      `  COGNITO_REGION: '${config.region}',`,
+      `  COGNITO_USER_POOL_ID: '${props.userPoolId}',`,
       `  COGNITO_CLIENT_ID: '${props.userPoolClientId}',`,
-      `  COGNITO_DOMAIN: '${props.cognitoDomainUrl}',`,
-      `  COGNITO_REDIRECT_URI: 'https://${config.subdomains.app}/auth/callback',`,
-      `  COGNITO_LOGOUT_URI: 'https://${config.subdomains.app}/',`,
-      `  PUBLIC_BASE_URL: 'https://${config.subdomains.app}',`,
+      `  APP_BASE_URL: 'https://${config.subdomains.app}',`,
       '};',
     ].join('\n');
 

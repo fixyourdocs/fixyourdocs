@@ -10,8 +10,7 @@ export interface NetworkStackProps extends StackProps {
 
 export class NetworkStack extends Stack {
   readonly hostedZone: IHostedZone;
-  readonly certApi: ICertificate;
-  readonly certAuth: ICertificate;
+  readonly cert: ICertificate;
 
   constructor(scope: Construct, id: string, props: NetworkStackProps) {
     super(scope, id, props);
@@ -23,22 +22,15 @@ export class NetworkStack extends Stack {
       zoneName: config.rootDomain,
     });
 
-    this.certApi = new Certificate(this, 'CertApi', {
+    this.cert = new Certificate(this, 'Cert', {
       domainName: config.rootDomain,
       subjectAlternativeNames: [
         `www.${config.rootDomain}`,
-        config.subdomains.api,
-        config.subdomains.mcp,
+        config.subdomains.hub,
       ],
       validation: CertificateValidation.fromDns(this.hostedZone),
     });
 
-    this.certAuth = new Certificate(this, 'CertAuth', {
-      domainName: config.subdomains.auth,
-      validation: CertificateValidation.fromDns(this.hostedZone),
-    });
-
-    new CfnOutput(this, 'CertApiArn', { value: this.certApi.certificateArn });
-    new CfnOutput(this, 'CertAuthArn', { value: this.certAuth.certificateArn });
+    new CfnOutput(this, 'CertArn', { value: this.cert.certificateArn });
   }
 }

@@ -6,9 +6,7 @@ export interface Config {
   docsfeedbackHostedZoneId: string;
   subdomains: {
     app: string;
-    api: string;
-    mcp: string;
-    auth: string;
+    hub: string;
   };
   allowedOrigins: string[];
   githubRepo: string;
@@ -28,9 +26,7 @@ export const config: Config = {
   docsfeedbackHostedZoneId: process.env.FYD_DOCSFEEDBACK_HOSTED_ZONE_ID ?? '',
   subdomains: {
     app: rootDomain,
-    api: `api.${rootDomain}`,
-    mcp: `mcp.${rootDomain}`,
-    auth: `auth.${rootDomain}`,
+    hub: `hub.${rootDomain}`,
   },
   allowedOrigins: [`https://${rootDomain}`, 'http://localhost:5173'],
   githubRepo: process.env.FYD_GITHUB_REPO ?? 'fixyourdocs/fixyourdocs',
