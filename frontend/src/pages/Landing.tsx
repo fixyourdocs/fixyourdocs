@@ -67,11 +67,11 @@ function Hero() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link to="/signup">
-            <Button>Claim your docs domain</Button>
+            <Button>Connect your docs repo</Button>
           </Link>
-          <Link to="/directory">
-            <Button variant="secondary">Browse the directory</Button>
-          </Link>
+          <a href="https://docsfeedback.org" target="_blank" rel="noopener noreferrer">
+            <Button variant="secondary">Read the protocol</Button>
+          </a>
         </div>
       </div>
       <DemoEmbed />
@@ -327,9 +327,6 @@ function Footer() {
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 text-sm text-slate-500">
         <p>FixYourDocs &middot; V1 &middot; us-east-1</p>
         <nav className="flex items-center gap-4">
-          <Link to="/directory" className="hover:text-slate-700">
-            Directory
-          </Link>
           <a
             href="https://docsfeedback.org"
             className="hover:text-slate-700"

@@ -5,25 +5,19 @@ declare global {
 }
 
 export interface RuntimeEnv {
-  API_BASE_URL: string;
-  MCP_BASE_URL: string;
-  COGNITO_AUTHORITY: string;
+  HUB_BASE_URL: string;
+  COGNITO_REGION: string;
+  COGNITO_USER_POOL_ID: string;
   COGNITO_CLIENT_ID: string;
-  COGNITO_DOMAIN: string;
-  COGNITO_REDIRECT_URI: string;
-  COGNITO_LOGOUT_URI: string;
-  PUBLIC_BASE_URL: string;
+  APP_BASE_URL: string;
 }
 
 const fallback: RuntimeEnv = {
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? 'https://api.fixyourdocs.io',
-  MCP_BASE_URL: import.meta.env.VITE_MCP_BASE_URL ?? 'https://mcp.fixyourdocs.io',
-  COGNITO_AUTHORITY: import.meta.env.VITE_COGNITO_AUTHORITY ?? '',
+  HUB_BASE_URL: import.meta.env.VITE_HUB_BASE_URL ?? 'https://hub.fixyourdocs.io',
+  COGNITO_REGION: import.meta.env.VITE_COGNITO_REGION ?? 'us-east-1',
+  COGNITO_USER_POOL_ID: import.meta.env.VITE_COGNITO_USER_POOL_ID ?? '',
   COGNITO_CLIENT_ID: import.meta.env.VITE_COGNITO_CLIENT_ID ?? '',
-  COGNITO_DOMAIN: import.meta.env.VITE_COGNITO_DOMAIN ?? 'https://auth.fixyourdocs.io',
-  COGNITO_REDIRECT_URI: import.meta.env.VITE_COGNITO_REDIRECT_URI ?? 'http://localhost:5173/auth/callback',
-  COGNITO_LOGOUT_URI: import.meta.env.VITE_COGNITO_LOGOUT_URI ?? 'http://localhost:5173/',
-  PUBLIC_BASE_URL: import.meta.env.VITE_PUBLIC_BASE_URL ?? 'https://fixyourdocs.io',
+  APP_BASE_URL: import.meta.env.VITE_APP_BASE_URL ?? 'https://fixyourdocs.io',
 };
 
 export const env: RuntimeEnv = { ...fallback, ...(typeof window !== 'undefined' ? window.__ENV__ ?? {} : {}) };

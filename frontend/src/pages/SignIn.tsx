@@ -18,7 +18,7 @@ export function SignIn() {
     setBusy(true);
     try {
       await signIn(email.trim().toLowerCase(), password);
-      navigate('/app', { replace: true });
+      navigate('/integrations/github', { replace: true });
     } catch (err) {
       if (err instanceof AuthError && err.code === 'UserNotConfirmedException') {
         navigate(`/signup/confirm?email=${encodeURIComponent(email)}`, { replace: true });
