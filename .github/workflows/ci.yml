@@ -15,4 +15,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm rebuild esbuild
       - run: pnpm -r typecheck
+      - run: pnpm --filter @fyd/backend test
       - run: pnpm --filter @fyd/frontend build
