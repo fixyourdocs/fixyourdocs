@@ -55,7 +55,18 @@ export const handler: APIGatewayProxyHandlerV2 = wrapPublic(async (event) => {
   );
   if (existing.Items && existing.Items.length > 0) {
     const existingId = existing.Items[0]!.reportId as string;
-    return publicJson(201, { id: existingId, deduplicated: true });
+    const existingCreatedAt = existing.Items[0]!.createdAt as string;
+    // Protocol v0 §7.2: duplicates return 200 OK with the SAME id and the
+    // SAME received_at as the original submission. The dedup-index GSI is
+    // KEYS_ONLY but includes createdAt as the range key, so it's available
+    // without a follow-up GetItem.
+    return publicJson(200, {
+      id: existingId,
+      received_at: existingCreatedAt,
+      protocol_version: '0',
+      server_capabilities: [],
+      deduplicated: true,
+    });
   }
 
   // Persist.
@@ -98,5 +109,13 @@ export const handler: APIGatewayProxyHandlerV2 = wrapPublic(async (event) => {
     }
   }
 
-  return publicJson(201, { id: reportId });
+  // Protocol v0 §7.2: 201 Created body MUST include id + received_at (RFC
+  // 3339) + protocol_version + server_capabilities. createdAt is already
+  // produced via new Date().toISOString() which is RFC 3339 compliant.
+  return publicJson(201, {
+    id: reportId,
+    received_at: createdAt,
+    protocol_version: '0',
+    server_capabilities: [],
+  });
 });
