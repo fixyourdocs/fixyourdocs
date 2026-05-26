@@ -29,7 +29,6 @@ If you want to **understand the protocol**, start at [fixyourdocs/protocol](http
 - [frontend/](frontend/) — Vite + React + Tailwind v4 SPA: landing page, public directory, dashboard, sign-up/sign-in.
 - [backend/](backend/) — REST API Lambdas (Node.js 20 / TypeScript, esbuild-bundled). Authenticated `/api/*` + public `/public/*` surfaces.
 - [mcp-server/](mcp-server/) — Public MCP endpoint (`file_report`, `list_reports`). JSON-RPC over HTTP; no agent auth.
-- [infra/](infra/) — AWS CDK app (TypeScript). Single region (us-east-1, CloudFront cert constraint).
 - [e2e/](e2e/) — Playwright suite covering the user-visible flows.
 - [SPEC.md](SPEC.md) — V1 product specification for this implementation. (For the **protocol** spec, see the [protocol repo](https://github.com/fixyourdocs/protocol).)
 
@@ -48,7 +47,9 @@ The frontend points at whatever `API_BASE_URL` / `MCP_BASE_URL` you configure at
 
 ## Self-hosting
 
-The CDK app reads all account-specific values from environment variables — nothing in this repo is bound to the production deployment. Set these before `cdk deploy`:
+The production hosted variant runs on AWS Lambda + API Gateway HTTP API + DynamoDB + Cognito + CloudFront, deployed via AWS CDK v2. The CDK app itself is operated from a separate private infrastructure repository; a public reference template will follow once the hosted variant is stable.
+
+Self-hosters writing their own CDK app today can match the contract by reading the following env vars in `lib/config.ts` and passing them through to the backend Lambdas:
 
 | Variable | Required | Notes |
 |---|---|---|
@@ -57,19 +58,9 @@ The CDK app reads all account-specific values from environment variables — not
 | `FYD_ROOT_DOMAIN` | no | Defaults to `fixyourdocs.io`. The SPA, API, MCP, and Cognito callback URLs derive from it. |
 | `FYD_HOSTED_ZONE_ID` | yes | Route 53 hosted zone ID for `FYD_ROOT_DOMAIN`. |
 | `FYD_OPS_ALERT_EMAIL` | yes | Subscribed to CloudWatch alarms + billing budget. |
-| `FYD_GITHUB_REPO` | no | `org/repo` allowed to assume the OIDC deploy role. Defaults to `fixyourdocs/fixyourdocs`. |
+| `FYD_GITHUB_REPO` | no | `org/repo` allowed to assume the OIDC deploy role. |
 | `FYD_COGNITO_DOMAIN_PREFIX` | no | Cognito Hosted UI prefix. Defaults to `fyd-auth-${account}` so deployments don't collide (Cognito prefixes are globally unique per region). |
-| `FYD_STACK_PREFIX` | no | Prefix applied to all stack names. Defaults to `Fyd`. |
-
-See [infra/lib/config.ts](infra/lib/config.ts) for the full schema.
-
-```sh
-export CDK_DEFAULT_ACCOUNT=123456789012
-export FYD_HOSTED_ZONE_ID=Z0XXXXXXXXXXXXX
-export FYD_OPS_ALERT_EMAIL=ops@example.com
-pnpm --filter @fyd/infra cdk synth
-pnpm --filter @fyd/infra cdk deploy --all
-```
+| `FYD_STACK_PREFIX` | no | Prefix applied to all stack names. |
 
 ## Using the hosted MCP endpoint
 

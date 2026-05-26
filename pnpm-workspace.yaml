@@ -1,5 +1,4 @@
 packages:
-  - infra
   - backend
   - mcp-server
   - frontend
