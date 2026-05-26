@@ -22,7 +22,13 @@ export class NetworkStack extends Stack {
       zoneName: config.rootDomain,
     });
 
-    this.cert = new Certificate(this, 'Cert', {
+    // Construct id stays `CertApi` (matching the original logical id in the
+    // already-deployed stack) so CloudFormation treats the SAN change as an
+    // in-place replacement on the same logical resource. That preserves the
+    // cross-stack export name (`ExportsOutputRefCertApi...`) consumers
+    // already import in `FydApiStack` and `FydFrontendStack`, and avoids the
+    // export-deadlock that would occur if we renamed to a new logical id.
+    this.cert = new Certificate(this, 'CertApi', {
       domainName: config.rootDomain,
       subjectAlternativeNames: [
         `www.${config.rootDomain}`,
@@ -31,6 +37,6 @@ export class NetworkStack extends Stack {
       validation: CertificateValidation.fromDns(this.hostedZone),
     });
 
-    new CfnOutput(this, 'CertArn', { value: this.cert.certificateArn });
+    new CfnOutput(this, 'CertApiArn', { value: this.cert.certificateArn });
   }
 }
