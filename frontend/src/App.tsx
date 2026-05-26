@@ -9,14 +9,7 @@ import { SignUp } from './pages/SignUp';
 import { ConfirmEmail } from './pages/ConfirmEmail';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
-import { Onboarding } from './pages/Onboarding';
-import { Dashboard } from './pages/Dashboard';
-import { Domains } from './pages/Domains';
-import { DomainDetail } from './pages/DomainDetail';
-import { ReportDetail } from './pages/ReportDetail';
-import { Directory } from './pages/Directory';
-import { PublicDomain } from './pages/PublicDomain';
-import { PublicReport } from './pages/PublicReport';
+import { IntegrationsSetup } from './pages/IntegrationsSetup';
 import { Nav } from './components/Nav';
 import { Spinner } from './components/Spinner';
 
@@ -61,14 +54,14 @@ function Shell() {
         <Route path="/signup/confirm" element={<ConfirmEmail />} />
         <Route path="/forgot" element={<ForgotPassword />} />
         <Route path="/reset" element={<ResetPassword />} />
-        <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
-        <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
-        <Route path="/app/domains" element={<RequireAuth><Domains /></RequireAuth>} />
-        <Route path="/app/domains/:domain" element={<RequireAuth><DomainDetail /></RequireAuth>} />
-        <Route path="/app/reports/:domain/:reportId" element={<RequireAuth><ReportDetail /></RequireAuth>} />
-        <Route path="/directory" element={<Directory />} />
-        <Route path="/r/:domain" element={<PublicDomain />} />
-        <Route path="/r/:domain/:reportId" element={<PublicReport />} />
+        <Route
+          path="/integrations/github"
+          element={
+            <RequireAuth>
+              <IntegrationsSetup />
+            </RequireAuth>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

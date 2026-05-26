@@ -8,10 +8,8 @@ import {
 } from 'amazon-cognito-identity-js';
 import { env } from './env';
 
-const POOL_ID = env.COGNITO_AUTHORITY.split('/').pop() ?? '';
-
 export const pool = new CognitoUserPool({
-  UserPoolId: POOL_ID,
+  UserPoolId: env.COGNITO_USER_POOL_ID,
   ClientId: env.COGNITO_CLIENT_ID,
 });
 

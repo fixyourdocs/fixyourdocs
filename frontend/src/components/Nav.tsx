@@ -1,11 +1,9 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { signOut } from '../lib/auth';
 import { Button } from '../components/Button';
 
 export function Nav({ authed }: { authed: boolean }) {
-  const loc = useLocation();
   const navigate = useNavigate();
-  const showDash = authed && loc.pathname.startsWith('/app');
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -15,12 +13,18 @@ export function Nav({ authed }: { authed: boolean }) {
           FixYourDocs
         </Link>
         <nav className="flex items-center gap-2 text-sm">
-          <Link to="/directory" className="px-2 py-1 text-slate-600 hover:text-slate-900">Directory</Link>
-          {showDash && (
-            <>
-              <Link to="/app" className="px-2 py-1 text-slate-600 hover:text-slate-900">Dashboard</Link>
-              <Link to="/app/domains" className="px-2 py-1 text-slate-600 hover:text-slate-900">Domains</Link>
-            </>
+          <a
+            href="https://docsfeedback.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2 py-1 text-slate-600 hover:text-slate-900"
+          >
+            Protocol
+          </a>
+          {authed && (
+            <Link to="/integrations/github" className="px-2 py-1 text-slate-600 hover:text-slate-900">
+              Integration
+            </Link>
           )}
           {authed ? (
             <Button
