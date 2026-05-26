@@ -21,7 +21,7 @@ const api = new ApiStack(app, `${p}ApiStack`, {
   env,
   config,
   hostedZone: network.hostedZone,
-  cert: network.cert,
+  certHub: network.certHub,
   userPool: auth.userPool,
   userPoolClient: auth.userPoolClient,
   reportsTable: data.reportsTable,
@@ -36,7 +36,7 @@ const frontend = new FrontendStack(app, `${p}FrontendStack`, {
   env,
   config,
   hostedZone: network.hostedZone,
-  cert: network.cert,
+  certApi: network.certApi,
   userPoolId: auth.userPool.userPoolId,
   userPoolClientId: auth.userPoolClient.userPoolClientId,
 });
