@@ -1,18 +1,16 @@
-import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables } from './db';
 
 // Per-IP token bucket for POST /v1/reports. The plan calls for 10 req/s
-// sustained, 100 burst. Implemented as a single conditional UpdateItem:
-// on each call we refill tokens by `rate * elapsed`, decrement one, and
-// persist. The condition rejects when the post-refill token count would
-// drop below 1, which yields a 429 to the caller.
+// sustained, 100 burst.
 //
-// Known v0 imprecision: DynamoDB expressions cannot `min(tokens, cap)`,
-// so a steady caller can accumulate slightly above `BURST_CAPACITY`
-// between request bursts. The TTL caps the leak at `TTL_SECONDS` of
-// idle (after which the row evicts and the bucket resets to `cap`).
-// Tightening to a proper cap is V2+; for v0 traffic the leak is
-// observable but harmless.
+// Implemented as read-then-conditional-update because DynamoDB's
+// UpdateExpression grammar does not support `*` (multiplication) — only
+// `+` and `-`. So we compute `min(cap, prev + rate * elapsed)` on the
+// application side and persist it with an optimistic-concurrency
+// condition on `lastRefillAt`. If two requests race, one wins and the
+// other fails closed (returns false → 429); the loser's tokens are not
+// consumed.
 
 const BURST_CAPACITY = 100;
 const REFILL_PER_SEC = 10;
@@ -33,23 +31,38 @@ export async function checkAndConsume(
   const refillPerSec = opts.refillPerSec ?? REFILL_PER_SEC;
   const ttlSeconds = opts.ttlSeconds ?? TTL_SECONDS;
   const now = opts.now ?? Math.floor(Date.now() / 1000);
+  const bucketKey = `ip:${rawKey}`;
+
+  const current = await ddb.send(
+    new GetCommand({
+      TableName: tables.rateLimit,
+      Key: { bucketKey },
+      ConsistentRead: true,
+    }),
+  );
+  const prevTokens = (current.Item?.tokens as number | undefined) ?? capacity;
+  const prevRefillAt = (current.Item?.lastRefillAt as number | undefined) ?? now;
+  const elapsed = Math.max(0, now - prevRefillAt);
+  const refilled = Math.min(capacity, prevTokens + refillPerSec * elapsed);
+
+  if (refilled < 1) {
+    return false;
+  }
 
   try {
     await ddb.send(
       new UpdateCommand({
         TableName: tables.rateLimit,
-        Key: { bucketKey: `ip:${rawKey}` },
+        Key: { bucketKey },
         UpdateExpression:
-          'SET tokens = if_not_exists(tokens, :cap) + :rate * (:now - if_not_exists(lastRefillAt, :now)) - :one, ' +
-          'lastRefillAt = :now, expiresAt = :exp',
+          'SET tokens = :newTokens, lastRefillAt = :now, expiresAt = :exp',
         ConditionExpression:
-          'if_not_exists(tokens, :cap) + :rate * (:now - if_not_exists(lastRefillAt, :now)) >= :one',
+          'attribute_not_exists(lastRefillAt) OR lastRefillAt = :prevRefillAt',
         ExpressionAttributeValues: {
-          ':cap': capacity,
-          ':rate': refillPerSec,
-          ':one': 1,
+          ':newTokens': refilled - 1,
           ':now': now,
           ':exp': now + ttlSeconds,
+          ':prevRefillAt': prevRefillAt,
         },
       }),
     );
