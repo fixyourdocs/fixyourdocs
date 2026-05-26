@@ -47,9 +47,9 @@ docsfeedback-site/
 
 ## Deploy
 
-The site ships to AWS via the `FydDocsfeedbackStack` in
-[`infra/`](../infra/). Deploy is currently manual; see the runbook in
-the private `control` repo for the exact commands.
+The site ships to AWS via the `FydDocsfeedbackStack` defined in a
+separate private infrastructure repository (not part of this OSS
+distribution).
 
 ## Licence
 

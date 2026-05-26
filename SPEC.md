@@ -105,23 +105,19 @@ fixyourdocs/
 ├── SPEC.md                     # this file
 ├── README.md
 ├── LICENSE                     # Apache-2.0 (re-licenced to FSL on paywall)
-├── infra/                      # CDK app (TypeScript)
-│   ├── bin/app.ts
-│   └── lib/
-│       ├── config.ts           # env-driven; no committed account IDs
-│       ├── auth-stack.ts       # Cognito user pool + client
-│       ├── api-stack.ts        # API Gateway, 5 Lambdas, forwarder Lambda, single custom domain
-│       ├── data-stack.ts       # DynamoDB tables: Reports, Integrations, RateLimit
-│       ├── frontend-stack.ts   # CloudFront + S3 SPA on fixyourdocs.io
-│       ├── monitoring-stack.ts # CloudWatch alarms, SNS, budget
-│       ├── network-stack.ts    # Route 53, ACM (hub.fixyourdocs.io + fixyourdocs.io)
-│       └── github-oidc-stack.ts
 ├── backend/                    # API Lambda handlers (5 endpoint handlers + forwarder)
 ├── mcp-server/                 # client-side npm package (no Lambda runtime); shipped by P0-10
 ├── frontend/                   # Vite + React SPA: landing + sign-up/sign-in + GitHub install
 ├── e2e/                        # Playwright forwarder smoke test
 └── .github/workflows/ci.yml    # typecheck + frontend build
 ```
+
+The production deploy pipeline (CDK app + `deploy.yml`) is operated
+from a separate private infrastructure repository and is not part of
+this OSS distribution. Self-hosters can replicate the stack from the
+AWS services listed in [§5 Key decisions](#5-key-decisions-locked-for-v1);
+a public reference template will follow once the hosted variant is
+stable.
 
 ## 7. Success criteria for V1
 
