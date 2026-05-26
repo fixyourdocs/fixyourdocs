@@ -4,42 +4,46 @@
 
 ## 1. Product
 
-AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, they file a structured report against the documentation's domain via an MCP server. Organisations that own the documentation receive these reports in a dashboard, reply with a fix, and close the report.
+AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, they file a structured report via the Docs Feedback Protocol. The Hub is a **thin report forwarder**: it accepts reports, deduplicates them, and forwards each unique report to a GitHub repository as an Issue on a maintainer-chosen target repo.
+
+V1 is intentionally narrow: no public dashboard, no public read API, no vendor directory, no replies-and-status workflow. Maintainers triage in their existing GitHub Issues UI; agents post structured reports through the existing protocol.
 
 ### Users
 
-- **Documentation owners (orgs)** — sign in to a web dashboard, claim a domain (e.g. `docs.acme.com`), triage and close reports.
-- **AI agents (anonymous)** — call the MCP server with no authentication, file reports against any registered domain, list existing reports for that domain to avoid duplicates.
-- **Public** — read-only access to reports (so anyone, including agents, can see what's open and avoid filing dupes).
+- **Documentation maintainers** — sign up to the Hub, install the GitHub App on a repo, point the Hub at that repo. From then on, the Hub turns every accepted report into a GitHub Issue.
+- **AI agents (anonymous)** — call `POST /v1/reports` with no authentication, file reports against any doc URL. No registration, no domain claim, no rate-limit beyond IP token bucket.
 
 ### Value
 
-- For orgs: a feedback channel from the population of agents already reading their docs.
+- For maintainers: a feedback channel from the population of agents reading their docs, surfaced in the tool they already triage in (GitHub Issues).
 - For agents: a place to put the "this instruction is wrong" signal instead of dropping it.
-- For users: improved doc quality over time; visibility into which docs are responsive vs. neglected.
+- For users: doc quality improves as agents' structured reports get triaged.
 
 ## 2. V1 Scope
 
 ### In
 
-- Email + password sign-up via Cognito (SRP-based, in-app, no Hosted UI redirect).
-- Create an organisation; one user per org in V1.
-- Claim a domain via DNS TXT record verification.
-- Public MCP endpoint with two tools: `file_report`, `list_reports`.
-- Public read API for reports.
-- Org dashboard: list domains, list reports per domain, reply, change status (`open` / `acknowledged` / `fixed` / `wontfix` / `duplicate`).
-- Basic rate limiting on the public + MCP surfaces.
-- Public vendor directory (`/directory` page, backed by `GET /public/domains`).
+- `POST /v1/reports` — accept a v0 report (unauthenticated, rate-limited).
+- `GET /v1/reports/:id` — fetch by id.
+- Cognito user sign-up / sign-in for maintainers (SRP-based, in-app, no Hosted UI):
+  - **Email + password** — v0 must-have.
+  - **GitHub OAuth federation** — v0 nice-to-have (deferrable to v0.1).
+- GitHub App install flow (`/v1/integrations/github/install` + callback).
+- Per-maintainer integration config (`POST /v1/orgs/me/integrations/github`) — set target repo + Issue template.
+- Forwarder Lambda — async-invoked on accepted report; mints a GitHub App installation token; posts an Issue on the target repo. Idempotent on `report_id`.
 
 ### Out (V2+)
 
+- Public read API for reports (reports live as GitHub Issues, viewed in the GitHub UI).
+- Hosted MCP endpoint — the MCP server is a client-side npm package shipped by P0-10.
+- Domain claim / DNS TXT verification.
+- Public vendor directory.
+- Org dashboard with reply / status transitions.
 - Team invitations, RBAC.
-- Comments threading, mentions, notifications.
-- Webhooks / Slack integration.
+- Webhooks / Slack / Linear / Jira sinks.
 - Paid tiers, billing.
 - Diff/patch suggestions from agents.
 - Search across reports.
-- Custom report fields per org.
 
 ### Non-goals (V1)
 
@@ -50,23 +54,28 @@ AI agents read documentation to help their users follow procedures. When they hi
 
 ## 3. Architecture (one line)
 
-CloudFront + S3 SPA → API Gateway HTTP API → Lambda (Node.js 20 / TypeScript) → DynamoDB. Cognito for human auth. Separate MCP route under the same API Gateway. DNS via Route 53. Everything deployed via AWS CDK from GitHub Actions using OIDC. Region: **us-east-1** (single region; CloudFront cert constraint).
+CloudFront + S3 SPA → API Gateway HTTP API → Lambda (Node.js 20 / TypeScript) → DynamoDB on-demand, plus a forwarder Lambda async-invoked on accepted reports that posts to GitHub Issues via a GitHub App installation token. Cognito for human auth. DNS via Route 53. Everything deployed via AWS CDK from GitHub Actions using OIDC. Region: **us-east-1** (single region; CloudFront cert constraint).
 
 ```
-Browser ────► CloudFront ────► S3 (SPA)
-                                              ──► API Gateway ──► Lambda ──► DynamoDB
-Agent  ────► API Gateway (MCP route) ──► Lambda ──► DynamoDB
-                  │
-                  └─► JWT authoriser (Cognito) for /api/*; no auth for /public/* and /mcp
+Agent  ────► hub.fixyourdocs.io ──► API Gateway ──► POST /v1/reports Lambda ──► DynamoDB (Reports)
+                                                                        │
+                                                                        └─async─► Forwarder Lambda ──► GitHub Issues API
+
+Maintainer ──► fixyourdocs.io ──► CloudFront ──► S3 (SPA)
+                                                    │
+                                                    └──► Cognito (SRP) sign-up / sign-in
+                                                    └──► hub.fixyourdocs.io /v1/integrations/github/*
+
+JWT authoriser (Cognito) protects /v1/orgs/* and /v1/integrations/*.
+/v1/reports* is unauthenticated, rate-limited only.
 ```
 
 ## 4. Domains (production deployment)
 
 | Hostname | Purpose | Backed by |
 |---|---|---|
-| `fixyourdocs.io` | Marketing + SPA (dashboard) | CloudFront → S3 |
-| `api.fixyourdocs.io` | REST API (authenticated + public) | API Gateway HTTP API |
-| `mcp.fixyourdocs.io` | MCP server | API Gateway HTTP API (same gateway, different domain) |
+| `fixyourdocs.io` | Marketing + SPA (sign-up + GitHub-install repo picker) | CloudFront → S3 |
+| `hub.fixyourdocs.io` | Hub API (single endpoint surface) | API Gateway HTTP API |
 | `docsfeedback.org` | Protocol home (open spec, JSON schemas) | Static site, separate stack |
 
 Self-hosted deployments derive these hostnames from `FYD_ROOT_DOMAIN` (see [README.md](README.md#self-hosting)).
@@ -75,18 +84,17 @@ Self-hosted deployments derive these hostnames from `FYD_ROOT_DOMAIN` (see [READ
 
 | Question | Decision | Why |
 |---|---|---|
-| Domain ownership proof | DNS TXT record | Standard, hard to spoof, no email guessing |
-| Agent auth | None — public, rate-limited | Lowest friction; reports are public anyway |
+| Report sink | GitHub Issues via GitHub App installation token, posted by an async-invoked forwarder Lambda | Maintainers already triage in GitHub; no new UI to build at v0 |
+| Agent auth on `POST /v1/reports` | None — rate-limited only | Lowest friction; reports are public-by-design (they become GitHub Issues) |
 | Frontend stack | Vite + React SPA, S3 + CloudFront via CDK | Fully CDK-managed, no Amplify lock-in |
-| Human auth | Cognito email/password, in-app SRP via `amazon-cognito-identity-js` | Native AWS, low ops; SRP keeps passwords client-side. No `*.amazoncognito.com` redirect |
-| Report visibility | Public read, org-only write | Lets agents dedupe; signals doc quality |
-| MCP surface | `file_report` + `list_reports` | Smallest useful surface |
-| DB | DynamoDB on-demand, multi-table | Safest at low volume, simple to evolve |
-| `orgId` shape | Equal to `slug` for V1 | Natural uniqueness via PK condition. Trade-off: no slug renames in V1 |
-| Rate limiting | Handler-level via `RateLimit` DynamoDB table + Lambda concurrency cap | WAFv2 does not support API Gateway HTTP APIs (v2). WAF still applied to CloudFront |
+| Human auth | Cognito user pool, in-app SRP via `amazon-cognito-identity-js`. Two sign-in paths into the same user pool: email + password (v0 must-have) and GitHub OAuth federation (v0 nice-to-have) | Native AWS, low ops; SRP keeps passwords client-side. GitHub OAuth gives maintainers who already use GitHub a one-click path without granting any third-party app extra access |
+| GitHub integration vs GitHub OAuth | Separate flows. Every maintainer (email-signup or GitHub-OAuth-signup) completes the GitHub App install once. The GitHub App + the GitHub OAuth login app can be the same registered app | `installations:write` and `read:user` are independent scopes; reusing one app simplifies setup |
+| DB | DynamoDB on-demand, multi-table (`Reports`, `Integrations`, `RateLimit`) | Safest at low volume, simple to evolve |
+| Dedup | `dedup_key = sha256(doc_url + summary + agent + day_bucket)` GSI on `Reports`; conditional write returns existing id | Avoids duplicate Issues from agents retrying |
+| Rate limiting | Handler-level via `RateLimit` DynamoDB table (per-IP token bucket) + Lambda reserved concurrency cap on `/v1/reports*` | WAFv2 does not support API Gateway HTTP APIs (v2). WAF still applied to CloudFront |
 | IaC | AWS CDK v2 (TypeScript) | One language across infra + backend |
 | CI/CD | GitHub Actions with OIDC role | No long-lived AWS keys in GitHub |
-| Licence | FSL-1.1-Apache-2.0 | Source-available; non-compete carve-out for 2 years; auto-converts to Apache 2.0 |
+| Licence | Apache-2.0 in this phase; re-licence to FSL-1.1-Apache-2.0 when paywall lands (P4-01) | Source-available; non-compete carve-out for 2 years; auto-converts to Apache 2.0 |
 
 The wire-protocol decisions (envelope shape, status vocabulary, version negotiation) are in the [protocol repo](https://github.com/fixyourdocs/protocol).
 
@@ -96,50 +104,50 @@ The wire-protocol decisions (envelope shape, status vocabulary, version negotiat
 fixyourdocs/
 ├── SPEC.md                     # this file
 ├── README.md
-├── LICENSE                     # FSL-1.1-Apache-2.0
+├── LICENSE                     # Apache-2.0 (re-licenced to FSL on paywall)
 ├── infra/                      # CDK app (TypeScript)
 │   ├── bin/app.ts
 │   └── lib/
 │       ├── config.ts           # env-driven; no committed account IDs
-│       ├── auth-stack.ts       # Cognito user pool + client + prefix domain
-│       ├── api-stack.ts        # API Gateway, Lambdas, custom domains
-│       ├── data-stack.ts       # DynamoDB tables
-│       ├── frontend-stack.ts   # CloudFront + S3 SPA
+│       ├── auth-stack.ts       # Cognito user pool + client
+│       ├── api-stack.ts        # API Gateway, 5 Lambdas, forwarder Lambda, single custom domain
+│       ├── data-stack.ts       # DynamoDB tables: Reports, Integrations, RateLimit
+│       ├── frontend-stack.ts   # CloudFront + S3 SPA on fixyourdocs.io
 │       ├── monitoring-stack.ts # CloudWatch alarms, SNS, budget
-│       ├── network-stack.ts    # Route 53, ACM
+│       ├── network-stack.ts    # Route 53, ACM (hub.fixyourdocs.io + fixyourdocs.io)
 │       └── github-oidc-stack.ts
-├── backend/                    # API Lambda handlers
-├── mcp-server/                 # MCP Lambda handler
-├── frontend/                   # Vite + React SPA
-├── e2e/                        # Playwright suite
+├── backend/                    # API Lambda handlers (5 endpoint handlers + forwarder)
+├── mcp-server/                 # client-side npm package (no Lambda runtime); shipped by P0-10
+├── frontend/                   # Vite + React SPA: landing + sign-up/sign-in + GitHub install
+├── e2e/                        # Playwright forwarder smoke test
 └── .github/workflows/ci.yml    # typecheck + frontend build
 ```
 
 ## 7. Success criteria for V1
 
-1. A new user can sign up, create an org, register a domain, prove ownership via DNS TXT, and see their dashboard — all from the primary product domain.
-2. An MCP client (Claude Desktop, Cursor, the [TypeScript](https://github.com/fixyourdocs/sdk-typescript) or [Python](https://github.com/fixyourdocs/sdk-python) SDK) pointed at `https://mcp.<root-domain>/mcp` can file a report against a registered domain without auth.
-3. The filed report appears in the org dashboard within 5 seconds.
-4. The org can reply, change status, and the changes are visible on the public read endpoint.
+1. A new maintainer can sign up via email + password (or GitHub OAuth), install the GitHub App on a repo they own, point the Hub at that repo, and choose an Issue template — all from `fixyourdocs.io`.
+2. An MCP client (Claude Desktop, Cursor, the [TypeScript](https://github.com/fixyourdocs/sdk-typescript) or [Python](https://github.com/fixyourdocs/sdk-python) SDK) that POSTs a v0 report to `https://hub.fixyourdocs.io/v1/reports` gets back a `201 { id }`.
+3. Within 10 seconds, the same report appears as a new Issue on the maintainer's target repo, with the body rendered from the Issue template.
+4. Posting the same report twice returns the same id and creates exactly one Issue (dedup).
 5. The whole stack deploys clean from a fresh `cdk deploy --all` on an empty AWS account, given only the env vars listed in [README.md](README.md#self-hosting).
-6. CI builds + typechecks on every push.
+6. CI builds + typechecks on every push to `main`.
 
 ## 8. Out-of-scope risks acknowledged
 
-- **Spam in V1:** mitigated by IP rate limit + per-domain cap; no captcha.
-- **No abuse reporting UI:** orgs can flag reports as `spam` (terminal status, hides from public list).
-- **No content moderation:** report bodies are user-supplied text; sanitised on render but not pre-screened.
-- **One Cognito region:** us-east-1 is hardcoded by the CloudFront ACM cert constraint, not by Cognito itself; multi-region is V2+.
+- **Spam in V1:** mitigated by IP rate limit + per-maintainer rate cap on the Issues forwarder; no captcha. Maintainers control their own repo and can close spammy Issues with GitHub's existing tools.
+- **No abuse reporting UI:** maintainers escalate to `hello@fixyourdocs.io`; abuse reports against the Hub itself land in the same inbox.
+- **No content moderation:** report bodies are user-supplied text; the GitHub Issue body is markdown-rendered by GitHub's existing sanitiser.
+- **One AWS region:** us-east-1 is hardcoded by the CloudFront ACM cert constraint, not by Cognito or DynamoDB itself; multi-region is V2+.
 
 ## 9. Relationship to the open protocol
 
 This implementation is one possible backend for the [Docs Feedback Protocol](https://github.com/fixyourdocs/protocol). The protocol is intentionally minimal and permissively licensed so that:
 
-- Other implementations can exist (self-hosted, on-premise, alternative providers).
+- Other implementations can exist (self-hosted, on-premise, alternative sinks like Linear, Jira, Discord).
 - The SDKs ([Python](https://github.com/fixyourdocs/sdk-python), [TypeScript](https://github.com/fixyourdocs/sdk-typescript)) and the [AGENTS.md snippet](https://github.com/fixyourdocs/agents-md-snippet) can be used against any conforming backend.
 - The on-the-wire format is stable independent of any one vendor.
 
-A change to message shapes or status vocabulary is a protocol change and belongs in the protocol repo. A change to how reports are stored, displayed, or rate-limited is an implementation change and belongs here.
+A change to message shapes or status vocabulary is a protocol change and belongs in the protocol repo. A change to how reports are stored, forwarded, or rate-limited is an implementation change and belongs here.
 
 ## 10. Contributing
 
