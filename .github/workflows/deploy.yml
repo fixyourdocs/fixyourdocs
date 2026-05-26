@@ -1,19 +1,99 @@
 name: Deploy
+
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+# Serialise deploys against production; never cancel an in-flight one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v6
+
       - uses: pnpm/action-setup@v6
+
       - uses: actions/setup-node@v6
-        with: { node-version: 20, cache: pnpm }
+        with:
+          node-version: 20
+          cache: pnpm
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm rebuild esbuild
-      - run: pnpm -r typecheck
-      - run: pnpm --filter @fyd/frontend build
-      - name: Deploy to AWS (manual)
-        run: echo "CDK deployment must be triggered manually or via AWS credentials configured in secrets"
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Backend tests
+        run: pnpm --filter @fyd/backend test
+
+      - name: Build frontend
+        run: pnpm --filter @fyd/frontend build
+
+      # Assume the pre-provisioned deployer role via GitHub OIDC.
+      # The role itself is created by FydGithubOidcStack (already deployed)
+      # and its ARN is stored in the AWS_DEPLOYER_ROLE_ARN repo secret.
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Resolve account id
+        id: account
+        run: |
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          echo "id=$ACCOUNT" >> "$GITHUB_OUTPUT"
+
+      - name: CDK deploy
+        working-directory: infra
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ steps.account.outputs.id }}
+          CDK_DEFAULT_REGION: us-east-1
+          FYD_AWS_REGION: us-east-1
+          FYD_HOSTED_ZONE_ID: ${{ secrets.FYD_HOSTED_ZONE_ID }}
+          FYD_DOCSFEEDBACK_HOSTED_ZONE_ID: ${{ secrets.FYD_DOCSFEEDBACK_HOSTED_ZONE_ID }}
+          FYD_OPS_ALERT_EMAIL: ${{ secrets.FYD_OPS_ALERT_EMAIL }}
+        run: |
+          pnpm exec cdk deploy --all --require-approval never --concurrency 4
+
+      # Post-deploy smoke. Failure here fails the workflow.
+      # V1 has no automated rollback — recovery is a manual `cdk deploy`
+      # of the prior git SHA (see P0-09 §7).
+      - name: Smoke tests
+        run: |
+          set -e
+          echo "▶ hub.fixyourdocs.io"
+          # /healthz is a P0-08 Step 1 follow-up. For now we only assert
+          # the API Gateway custom domain is reachable over TLS via the
+          # CORS preflight; switch to a strict 200 + JSON body check
+          # once the healthz handler ships.
+          curl --fail --show-error --silent --max-time 10 \
+            -o /dev/null -w "  status=%{http_code} time=%{time_total}s\n" \
+            -X OPTIONS https://hub.fixyourdocs.io/v1/reports
+
+          echo "▶ fixyourdocs.io"
+          curl --fail --show-error --silent --max-time 10 \
+            -o /dev/null -w "  status=%{http_code} time=%{time_total}s\n" \
+            https://fixyourdocs.io/
+
+          echo "▶ docsfeedback.org"
+          curl --fail --show-error --silent --max-time 10 \
+            -o /dev/null -w "  status=%{http_code} time=%{time_total}s\n" \
+            https://docsfeedback.org/
+
+# Required repo secrets (configure via Settings → Secrets and variables → Actions):
+#   AWS_DEPLOYER_ROLE_ARN           — arn:aws:iam::<acct>:role/gh-actions-deployer
+#   FYD_HOSTED_ZONE_ID              — Route53 zone id for fixyourdocs.io
+#   FYD_DOCSFEEDBACK_HOSTED_ZONE_ID — Route53 zone id for docsfeedback.org
+#   FYD_OPS_ALERT_EMAIL             — destination for SNS budget / alarm alerts
