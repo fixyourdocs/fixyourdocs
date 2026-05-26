@@ -7,10 +7,7 @@ export const ddb = DynamoDBDocumentClient.from(raw, {
 });
 
 export const tables = {
-  orgs: process.env.ORGS_TABLE!,
-  memberships: process.env.MEMBERSHIPS_TABLE!,
-  domains: process.env.DOMAINS_TABLE!,
   reports: process.env.REPORTS_TABLE!,
-  replies: process.env.REPLIES_TABLE!,
+  integrations: process.env.INTEGRATIONS_TABLE!,
   rateLimit: process.env.RATE_LIMIT_TABLE!,
 } as const;

@@ -1,79 +1,44 @@
 import { z } from 'zod';
 
-const hostnameRegex = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
-
-const PRIVATE_HOSTS = new Set(['localhost', 'localhost.localdomain']);
-
-export const slugRegex = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
-
-export const orgCreateSchema = z.object({
-  name: z.string().min(2).max(80),
-  slug: z.string().regex(slugRegex, 'invalid slug'),
-});
-
-export const domainSchema = z
-  .string()
-  .min(3)
-  .max(253)
-  .transform((s) => s.toLowerCase().trim().replace(/\.$/, ''))
-  .refine((s) => hostnameRegex.test(s), 'invalid domain')
-  .refine((s) => !PRIVATE_HOSTS.has(s), 'private hostname not allowed')
-  .refine((s) => !/^\d+\.\d+\.\d+\.\d+$/.test(s), 'ip not allowed');
-
-export const registerDomainSchema = z.object({
-  domain: domainSchema,
-});
-
-export const issueTypeSchema = z.enum([
-  'gap',
+export const reportKindSchema = z.enum([
+  'broken',
+  'incorrect',
   'outdated',
-  'contradiction',
-  'dead_end',
-  'broken_link',
+  'missing',
+  'unclear',
   'other',
 ]);
 
-export const statusSchema = z.enum([
-  'open',
-  'acknowledged',
-  'fixed',
-  'wontfix',
-  'duplicate',
-  'spam',
-]);
-
 export const fileReportSchema = z.object({
-  domain: domainSchema,
-  url: z.string().url().max(2048),
-  issueType: issueTypeSchema,
-  title: z.string().min(1).max(120),
-  description: z.string().min(1).max(4000),
-  evidence: z.string().max(8000).optional(),
+  protocol_version: z.literal('0'),
+  doc_url: z.string().url().max(2048),
+  agent: z.object({
+    name: z.string().min(1).max(120),
+  }),
+  report: z.object({
+    kind: reportKindSchema,
+    summary: z.string().min(1).max(280),
+    details: z.string().max(8000).optional(),
+  }),
 });
 
-export const listReportsSchema = z.object({
-  domain: domainSchema,
-  status: statusSchema.optional(),
-  limit: z.coerce.number().int().min(1).max(50).optional(),
+export type FileReport = z.infer<typeof fileReportSchema>;
+
+const repoOwnerRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38}[a-zA-Z0-9])?$/;
+const repoNameRegex = /^[a-zA-Z0-9._-]{1,100}$/;
+
+export const integrationCreateSchema = z.object({
+  installation_id: z.coerce.number().int().positive(),
+  repo_owner: z.string().regex(repoOwnerRegex, 'invalid repo owner'),
+  repo_name: z.string().regex(repoNameRegex, 'invalid repo name'),
+  issue_template: z.string().min(1).max(8000),
 });
 
-export const patchReportSchema = z.object({
-  status: statusSchema.optional(),
-  note: z.string().max(4000).optional(),
+export type IntegrationCreate = z.infer<typeof integrationCreateSchema>;
+
+export const oauthStateSchema = z.object({
+  nonce: z.string().min(16).max(128),
+  return_to: z.string().max(2048).optional(),
 });
 
-export const replySchema = z.object({
-  body: z.string().min(1).max(4000),
-  visibility: z.enum(['public', 'internal']).optional(),
-});
-
-export function urlMatchesDomain(url: string, domain: string): boolean {
-  try {
-    const u = new URL(url);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-    const host = u.hostname.toLowerCase();
-    return host === domain || host.endsWith('.' + domain);
-  } catch {
-    return false;
-  }
-}
+export type OAuthState = z.infer<typeof oauthStateSchema>;
