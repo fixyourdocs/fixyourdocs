@@ -4,7 +4,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "noEmit": true,
-    "types": ["node", "aws-lambda"]
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src/**/*.ts"]
 }
