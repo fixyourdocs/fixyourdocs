@@ -27,14 +27,19 @@ export default defineConfig({
     projects: [
         { name: 'setup', testMatch: /.*\.setup\.ts/ },
         {
-            name: 'chromium',
-            testMatch: /dashboard\.spec\.ts/,
+            name: 'authed',
+            testMatch: /integrations\.spec\.ts/,
             use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
             dependencies: ['setup'],
         },
         {
             name: 'public',
-            testMatch: /public\.spec\.ts/,
+            testMatch: /landing\.spec\.ts/,
+            use: { ...devices['Desktop Chrome'] },
+        },
+        {
+            name: 'forwarder',
+            testMatch: /forwarder\.spec\.ts/,
             use: { ...devices['Desktop Chrome'] },
         },
     ],

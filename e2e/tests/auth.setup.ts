@@ -12,8 +12,8 @@ setup('authenticate', async ({ page }) => {
     await page.locator('#pw').fill(PASSWORD);
     await page.getByRole('button', { name: /sign in/i }).click();
 
-    await page.waitForURL(/\/app($|\/|\?)/, { timeout: 20_000 });
-    await expect(page).toHaveURL(/\/app/);
+    await page.waitForURL(/\/integrations\/github/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/integrations\/github/);
 
     await page.context().storageState({ path: STORAGE_STATE });
 });
