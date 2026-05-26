@@ -28,7 +28,7 @@ export default defineConfig({
         { name: 'setup', testMatch: /.*\.setup\.ts/ },
         {
             name: 'authed',
-            testMatch: /integrations\.spec\.ts/,
+            testMatch: /(integrations|auth)\.spec\.ts/,
             use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
             dependencies: ['setup'],
         },
