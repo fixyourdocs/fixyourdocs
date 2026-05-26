@@ -23,7 +23,7 @@ import { Config } from './config';
 export interface ApiStackProps extends StackProps {
   config: Config;
   hostedZone: IHostedZone;
-  cert: ICertificate;
+  certHub: ICertificate;
   userPool: UserPool;
   userPoolClient: UserPoolClient;
   reportsTable: Table;
@@ -137,7 +137,7 @@ export class ApiStack extends Stack {
 
     this.hubDomain = new DomainName(this, 'HubDomain', {
       domainName: config.subdomains.hub,
-      certificate: props.cert,
+      certificate: props.certHub,
     });
 
     new ApiMapping(this, 'HubMapping', {

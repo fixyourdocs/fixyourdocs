@@ -25,7 +25,7 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 export interface FrontendStackProps extends StackProps {
   config: Config;
   hostedZone: IHostedZone;
-  cert: ICertificate;
+  certApi: ICertificate;
   userPoolId: string;
   userPoolClientId: string;
 }
@@ -67,7 +67,7 @@ export class FrontendStack extends Stack {
     this.distribution = new Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
       domainNames: [config.subdomains.app, `www.${config.subdomains.app}`],
-      certificate: props.cert,
+      certificate: props.certApi,
       priceClass: PriceClass.PRICE_CLASS_100,
       defaultBehavior: {
         origin: S3BucketOrigin.withOriginAccessControl(this.bucket),
