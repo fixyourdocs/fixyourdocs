@@ -8,11 +8,8 @@ import {
 } from 'aws-cdk-lib/aws-dynamodb';
 
 export class DataStack extends Stack {
-  readonly orgsTable: Table;
-  readonly membershipsTable: Table;
-  readonly domainsTable: Table;
   readonly reportsTable: Table;
-  readonly repliesTable: Table;
+  readonly integrationsTable: Table;
   readonly rateLimitTable: Table;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -24,72 +21,22 @@ export class DataStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     };
 
-    this.orgsTable = new Table(this, 'Organizations', {
-      ...baseProps,
-      tableName: 'fyd-organizations',
-      partitionKey: { name: 'orgId', type: AttributeType.STRING },
-    });
-    this.orgsTable.addGlobalSecondaryIndex({
-      indexName: 'slug-index',
-      partitionKey: { name: 'slug', type: AttributeType.STRING },
-      projectionType: ProjectionType.ALL,
-    });
-
-    this.membershipsTable = new Table(this, 'Memberships', {
-      ...baseProps,
-      tableName: 'fyd-memberships',
-      partitionKey: { name: 'userId', type: AttributeType.STRING },
-      sortKey: { name: 'orgId', type: AttributeType.STRING },
-    });
-    this.membershipsTable.addGlobalSecondaryIndex({
-      indexName: 'org-index',
-      partitionKey: { name: 'orgId', type: AttributeType.STRING },
-      sortKey: { name: 'userId', type: AttributeType.STRING },
-      projectionType: ProjectionType.ALL,
-    });
-
-    this.domainsTable = new Table(this, 'Domains', {
-      ...baseProps,
-      tableName: 'fyd-domains',
-      partitionKey: { name: 'domain', type: AttributeType.STRING },
-    });
-    this.domainsTable.addGlobalSecondaryIndex({
-      indexName: 'org-index',
-      partitionKey: { name: 'orgId', type: AttributeType.STRING },
-      sortKey: { name: 'domain', type: AttributeType.STRING },
-      projectionType: ProjectionType.ALL,
-    });
-    this.domainsTable.addGlobalSecondaryIndex({
-      indexName: 'status-index',
-      partitionKey: { name: 'status', type: AttributeType.STRING },
-      sortKey: { name: 'verifiedAt', type: AttributeType.STRING },
-      projectionType: ProjectionType.ALL,
-    });
-
     this.reportsTable = new Table(this, 'Reports', {
       ...baseProps,
       tableName: 'fyd-reports',
-      partitionKey: { name: 'domain', type: AttributeType.STRING },
-      sortKey: { name: 'reportId', type: AttributeType.STRING },
+      partitionKey: { name: 'reportId', type: AttributeType.STRING },
     });
     this.reportsTable.addGlobalSecondaryIndex({
-      indexName: 'status-index',
-      partitionKey: { name: 'domain', type: AttributeType.STRING },
-      sortKey: { name: 'statusCreatedAt', type: AttributeType.STRING },
-      projectionType: ProjectionType.ALL,
-    });
-    this.reportsTable.addGlobalSecondaryIndex({
-      indexName: 'org-status-index',
-      partitionKey: { name: 'orgId', type: AttributeType.STRING },
-      sortKey: { name: 'statusCreatedAt', type: AttributeType.STRING },
-      projectionType: ProjectionType.ALL,
+      indexName: 'dedup-index',
+      partitionKey: { name: 'dedupKey', type: AttributeType.STRING },
+      sortKey: { name: 'createdAt', type: AttributeType.STRING },
+      projectionType: ProjectionType.KEYS_ONLY,
     });
 
-    this.repliesTable = new Table(this, 'Replies', {
+    this.integrationsTable = new Table(this, 'Integrations', {
       ...baseProps,
-      tableName: 'fyd-replies',
-      partitionKey: { name: 'reportId', type: AttributeType.STRING },
-      sortKey: { name: 'createdAt', type: AttributeType.STRING },
+      tableName: 'fyd-integrations',
+      partitionKey: { name: 'userId', type: AttributeType.STRING },
     });
 
     this.rateLimitTable = new Table(this, 'RateLimit', {
@@ -99,7 +46,7 @@ export class DataStack extends Stack {
       timeToLiveAttribute: 'expiresAt',
     });
 
-    new CfnOutput(this, 'OrgsTableName', { value: this.orgsTable.tableName });
     new CfnOutput(this, 'ReportsTableName', { value: this.reportsTable.tableName });
+    new CfnOutput(this, 'IntegrationsTableName', { value: this.integrationsTable.tableName });
   }
 }
