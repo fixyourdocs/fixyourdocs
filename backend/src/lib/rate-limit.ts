@@ -21,6 +21,7 @@ export interface RateLimitOptions {
   refillPerSec?: number;
   ttlSeconds?: number;
   now?: number;
+  keyPrefix?: string; // defaults to 'ip'
 }
 
 export async function checkAndConsume(
@@ -31,7 +32,7 @@ export async function checkAndConsume(
   const refillPerSec = opts.refillPerSec ?? REFILL_PER_SEC;
   const ttlSeconds = opts.ttlSeconds ?? TTL_SECONDS;
   const now = opts.now ?? Math.floor(Date.now() / 1000);
-  const bucketKey = `ip:${rawKey}`;
+  const bucketKey = `${opts.keyPrefix ?? 'ip'}:${rawKey}`;
 
   const current = await ddb.send(
     new GetCommand({

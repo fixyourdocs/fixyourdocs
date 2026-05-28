@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mocks must be set up before importing the handler. The handler module
 // instantiates `new LambdaClient({})` at module load time, so we need a
@@ -133,5 +133,34 @@ describe('POST /v1/reports response shape (protocol v0 §7.2)', () => {
     expect(secondBody.received_at).toBe(firstBody.received_at);
     expect(secondBody.protocol_version).toBe('0');
     expect(Array.isArray(secondBody.server_capabilities)).toBe(true);
+  });
+});
+
+describe('POST /v1/reports → forwarder hand-off (Step 6g contract)', () => {
+  beforeEach(() => {
+    sendMock.mockReset();
+    lambdaSendMock.mockClear();
+    process.env.FORWARDER_FN_NAME = 'fyd-forwarder';
+  });
+
+  afterEach(() => {
+    delete process.env.FORWARDER_FN_NAME;
+  });
+
+  it('async-invokes the forwarder with a Payload of exactly { report_id }', async () => {
+    sendMock.mockResolvedValueOnce({ Items: [] }); // dedup miss
+    sendMock.mockResolvedValueOnce({}); // Put
+
+    const res = await invoke(VALID_BODY);
+    expect(res.statusCode).toBe(201);
+    const newId = (JSON.parse(res.body) as { id: string }).id;
+
+    expect(lambdaSendMock).toHaveBeenCalledTimes(1);
+    const invokeInput = lambdaSendMock.mock.calls[0][0].input;
+    expect(invokeInput.InvocationType).toBe('Event');
+    const decoded = JSON.parse(Buffer.from(invokeInput.Payload as Buffer).toString('utf8'));
+    expect(decoded).toEqual({ report_id: newId });
+    // No stale user_id leaks into the event contract.
+    expect(Object.keys(decoded)).toEqual(['report_id']);
   });
 });
