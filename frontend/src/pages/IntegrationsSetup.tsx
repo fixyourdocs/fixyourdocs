@@ -1,11 +1,10 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '../components/Button';
 import { Input, Label } from '../components/Input';
 import { Card, CardBody, CardHeader } from '../components/Card';
 import { ApiError, api } from '../lib/api';
 import { env } from '../lib/env';
-import { getIdToken } from '../lib/auth';
 
 const DEFAULT_TEMPLATE = `**Docs feedback from an AI agent**
 
@@ -18,6 +17,15 @@ const DEFAULT_TEMPLATE = `**Docs feedback from an AI agent**
 {details}
 `;
 
+// Error codes the install callback redirects back with (?error=...).
+const INSTALL_ERRORS: Record<string, string> = {
+  not_your_installation: "You don't have admin access to that GitHub installation.",
+  state_mismatch: 'Your install session expired — please start the install again.',
+  github_oauth_failed: "Couldn't verify your GitHub authorization — please try again.",
+  rate_limited: 'Too many attempts — wait a moment and try again.',
+  invalid_request: 'GitHub returned an unexpected response — please try again.',
+};
+
 export function IntegrationsSetup() {
   const [step, setStep] = useState<'install' | 'configure' | 'done'>('install');
   const [installationId, setInstallationId] = useState('');
@@ -26,11 +34,32 @@ export function IntegrationsSetup() {
   const [issueTemplate, setIssueTemplate] = useState(DEFAULT_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
 
+  // After GitHub redirects back to this page, advance to "configure"
+  // (prefilling the installation id) or surface the error, then strip the
+  // query so a refresh doesn't re-trigger it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorCode = params.get('error');
+    const installed = params.get('installed');
+    if (errorCode) {
+      setError(INSTALL_ERRORS[errorCode] ?? `GitHub install failed (${errorCode}). Please try again.`);
+    } else if (installed === '1') {
+      const instId = params.get('installation_id');
+      if (instId) setInstallationId(instId);
+      setStep('configure');
+    }
+    if (errorCode || installed) {
+      window.history.replaceState({}, '', '/integrations/github');
+    }
+  }, []);
+
   const startInstall = useMutation({
     mutationFn: async () => {
-      const token = await getIdToken();
-      if (!token) throw new Error('not_signed_in');
-      window.location.href = `${env.HUB_BASE_URL}/v1/integrations/github/install?token=${encodeURIComponent(token)}`;
+      // install is authed (the JWT authoriser reads the Authorization header),
+      // so we fetch with the header via api() and then redirect the browser to
+      // the returned GitHub URL — a top-level navigation couldn't carry the header.
+      const { url } = await api<{ url: string }>('/v1/integrations/github/install');
+      window.location.href = url;
     },
     onError: () => setError('Could not start the GitHub install flow.'),
   });

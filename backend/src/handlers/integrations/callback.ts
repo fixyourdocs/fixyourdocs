@@ -75,6 +75,8 @@ export const handler: APIGatewayProxyHandlerV2 = wrapPublic(
     );
 
     // S3: redirect only to the server-controlled SPA, never a request URL.
-    return redirect(appUrl('/integrations/github?installed=1'));
+    // Pass installation_id back so the configure form can prefill it (the
+    // backend still trusts the stored value, not this query param).
+    return redirect(appUrl(`/integrations/github?installed=1&installation_id=${installationId}`));
   },
 );

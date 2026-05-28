@@ -7,7 +7,7 @@ import { HttpError } from './auth';
 // javascript:/data: link into a markdown autolink.
 
 const PLACEHOLDER = /\{(\w+)\}/g;
-const ALLOWED = new Set(['summary', 'details', 'doc_url']);
+const ALLOWED = new Set(['summary', 'details', 'doc_url', 'agent_name', 'report_kind']);
 const MAX_BODY = 60_000; // under GitHub's 65536-char issue-body limit
 
 // Insert a zero-width space after a leading @ or # so GitHub stops treating it
@@ -18,6 +18,8 @@ export interface RenderInput {
   summary: string;
   details?: string;
   doc_url: string;
+  agent_name?: string;
+  report_kind?: string;
 }
 
 export function renderIssue(template: string, report: RenderInput): { title: string; body: string } {
@@ -33,6 +35,8 @@ export function renderIssue(template: string, report: RenderInput): { title: str
     summary: neutralize(report.summary),
     details: neutralize(report.details ?? ''),
     doc_url: /^https?:\/\//i.test(report.doc_url) ? report.doc_url : '(invalid url)',
+    agent_name: neutralize(report.agent_name ?? ''),
+    report_kind: neutralize(report.report_kind ?? ''),
   };
 
   // Single, non-recursive pass: replacement text is never re-scanned for
