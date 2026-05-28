@@ -23,7 +23,7 @@ export function Nav({ authed }: { authed: boolean }) {
           </a>
           {authed && (
             <Link to="/integrations/github" className="px-2 py-1 text-slate-600 hover:text-slate-900">
-              Integration
+              Settings
             </Link>
           )}
           {authed ? (

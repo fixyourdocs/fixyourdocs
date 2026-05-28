@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../components/Button';
-import { Input, Label } from '../components/Input';
+import { Input, Textarea, Label } from '../components/Input';
 import { Card, CardBody, CardHeader } from '../components/Card';
+import { Spinner } from '../components/Spinner';
 import { ApiError, api } from '../lib/api';
 import { env } from '../lib/env';
 
@@ -26,38 +27,151 @@ const INSTALL_ERRORS: Record<string, string> = {
   invalid_request: 'GitHub returned an unexpected response — please try again.',
 };
 
-export function IntegrationsSetup() {
-  const [step, setStep] = useState<'install' | 'configure' | 'done'>('install');
-  const [installationId, setInstallationId] = useState('');
-  const [repoOwner, setRepoOwner] = useState('');
-  const [repoName, setRepoName] = useState('');
-  const [issueTemplate, setIssueTemplate] = useState(DEFAULT_TEMPLATE);
-  const [error, setError] = useState<string | null>(null);
+interface Integration {
+  status: string;
+  installationId?: number;
+  installAccountLogin?: string;
+  repoOwner?: string;
+  repoName?: string;
+  issueTemplate?: string;
+}
+interface DnsRecord {
+  name: string;
+  type: string;
+  value: string;
+}
+interface DomainView {
+  domain: string;
+  status: string;
+  createdAt?: string;
+  verifiedAt?: string;
+  dns_record?: DnsRecord;
+}
+interface Me {
+  sub: string;
+  email?: string;
+  integration: Integration | null;
+  domains: DomainView[];
+}
 
-  // After GitHub redirects back to this page, advance to "configure"
-  // (prefilling the installation id) or surface the error, then strip the
-  // query so a refresh doesn't re-trigger it.
+const BADGE: Record<string, string> = {
+  verified: 'bg-green-100 text-green-800',
+  configured: 'bg-green-100 text-green-800',
+  pending: 'bg-amber-100 text-amber-800',
+  installed: 'bg-sky-100 text-sky-800',
+  revoked: 'bg-slate-100 text-slate-600',
+};
+
+function Badge({ status }: { status: string }) {
+  return (
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${BADGE[status] ?? 'bg-slate-100 text-slate-600'}`}>
+      {status}
+    </span>
+  );
+}
+
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-[11px] uppercase tracking-wide text-slate-400">{label}</p>
+        <code className="block truncate font-mono text-xs text-slate-800">{value}</code>
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={async () => {
+          await navigator.clipboard?.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        }}
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </Button>
+    </div>
+  );
+}
+
+export function IntegrationsSetup() {
+  const qc = useQueryClient();
+  const [banner, setBanner] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+
+  // Handle the GitHub install redirect (?installed=1 / ?error=...), then strip
+  // the query so a refresh doesn't replay it.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const errorCode = params.get('error');
     const installed = params.get('installed');
     if (errorCode) {
-      setError(INSTALL_ERRORS[errorCode] ?? `GitHub install failed (${errorCode}). Please try again.`);
+      setBanner({ kind: 'error', text: INSTALL_ERRORS[errorCode] ?? `GitHub install failed (${errorCode}).` });
     } else if (installed === '1') {
-      const instId = params.get('installation_id');
-      if (instId) setInstallationId(instId);
-      setStep('configure');
+      setBanner({ kind: 'ok', text: 'GitHub App installed — now pick the repo reports should land in.' });
+      qc.invalidateQueries({ queryKey: ['me'] });
     }
-    if (errorCode || installed) {
-      window.history.replaceState({}, '', '/integrations/github');
-    }
-  }, []);
+    if (errorCode || installed) window.history.replaceState({}, '', '/integrations/github');
+  }, [qc]);
+
+  const me = useQuery<Me>({ queryKey: ['me'], queryFn: () => api<Me>('/v1/orgs/me') });
+
+  if (me.isLoading) return <Spinner />;
+
+  return (
+    <main className="mx-auto max-w-2xl space-y-6 px-6 py-12">
+      <div>
+        <h1 className="text-lg font-semibold text-slate-900">Settings</h1>
+        <p className="mt-1 text-sm text-slate-500">Connect a repo and verify the domains your docs live on.</p>
+      </div>
+
+      {banner && (
+        <div className={`rounded-md px-4 py-3 text-sm ${banner.kind === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>
+          {banner.text}
+        </div>
+      )}
+
+      {me.isError || !me.data ? (
+        <Card>
+          <CardBody>
+            <p className="text-sm text-red-600">Couldn't load your settings. Refresh to try again.</p>
+          </CardBody>
+        </Card>
+      ) : (
+        <>
+          <GithubRepoSection integration={me.data.integration} />
+          <DomainsSection domains={me.data.domains} />
+          <p className="text-xs text-slate-500">
+            Agents post to{' '}
+            <code className="rounded bg-slate-100 px-1">{`POST ${env.HUB_BASE_URL}/v1/reports`}</code>. A report whose{' '}
+            <code className="rounded bg-slate-100 px-1">doc_url</code> is on a verified domain lands as an Issue on your connected repo within seconds.
+          </p>
+        </>
+      )}
+    </main>
+  );
+}
+
+function GithubRepoSection({ integration }: { integration: Integration | null }) {
+  const qc = useQueryClient();
+  const installed = !!integration;
+  const configured = integration?.status === 'configured';
+
+  const [repoOwner, setRepoOwner] = useState(integration?.repoOwner ?? '');
+  const [repoName, setRepoName] = useState(integration?.repoName ?? '');
+  const [issueTemplate, setIssueTemplate] = useState(integration?.issueTemplate ?? DEFAULT_TEMPLATE);
+  const [error, setError] = useState<string | null>(null);
+
+  // Re-sync the form when the integration finishes loading / changes.
+  useEffect(() => {
+    setRepoOwner(integration?.repoOwner ?? '');
+    setRepoName(integration?.repoName ?? '');
+    setIssueTemplate(integration?.issueTemplate ?? DEFAULT_TEMPLATE);
+  }, [integration?.repoOwner, integration?.repoName, integration?.issueTemplate]);
 
   const startInstall = useMutation({
     mutationFn: async () => {
-      // install is authed (the JWT authoriser reads the Authorization header),
-      // so we fetch with the header via api() and then redirect the browser to
-      // the returned GitHub URL — a top-level navigation couldn't carry the header.
+      // install is authed; api() attaches the bearer, then we redirect to the
+      // returned GitHub URL (a top-level navigation couldn't carry the header).
       const { url } = await api<{ url: string }>('/v1/integrations/github/install');
       window.location.href = url;
     },
@@ -66,142 +180,198 @@ export function IntegrationsSetup() {
 
   const save = useMutation({
     mutationFn: () =>
-      api<{ ok: true }>('/v1/orgs/me/integrations/github', {
+      api<{ status: string; repo: string }>('/v1/orgs/me/integrations/github', {
         method: 'POST',
         body: JSON.stringify({
-          installation_id: Number(installationId),
-          repo_owner: repoOwner,
-          repo_name: repoName,
+          installation_id: integration?.installationId ?? 0,
+          repo_owner: repoOwner.trim(),
+          repo_name: repoName.trim(),
           issue_template: issueTemplate,
         }),
       }),
-    onSuccess: () => setStep('done'),
-    onError: (err: ApiError) => setError(err.message),
+    onSuccess: () => {
+      setError(null);
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: (err: ApiError) =>
+      setError(err.code === 'no_installation' ? 'Install the GitHub App first.' : err.message),
   });
 
-  function onConfigureSubmit(e: FormEvent) {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     save.mutate();
   }
 
   return (
-    <main className="mx-auto max-w-xl px-6 py-12">
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold text-slate-900">Connect a GitHub repo</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            FixYourDocs forwards every accepted report as a GitHub Issue on a repo you control.
+    <Card>
+      <CardHeader className="flex items-start justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">GitHub repo</h2>
+          <p className="mt-1 text-sm text-slate-500">Accepted reports are forwarded here as Issues.</p>
+        </div>
+        {installed && integration && <Badge status={integration.status} />}
+      </CardHeader>
+      <CardBody className="space-y-4">
+        {configured ? (
+          <p className="text-sm text-slate-700">
+            Connected — reports go to{' '}
+            <code className="rounded bg-slate-100 px-1 text-xs">
+              {integration!.repoOwner}/{integration!.repoName}
+            </code>
+            .
           </p>
-        </CardHeader>
-        <CardBody>
-          {step === 'install' && (
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600">
-                Step 1 of 2. Install the FixYourDocs GitHub App on the repo where you want
-                Issues to land.
-              </p>
-              <Button onClick={() => startInstall.mutate()} disabled={startInstall.isPending}>
-                {startInstall.isPending ? 'Redirecting…' : 'Install the GitHub App'}
-              </Button>
-              <p className="text-xs text-slate-500">
-                After install, GitHub will redirect you back here to complete configuration.
-              </p>
-              <details className="text-xs text-slate-500">
-                <summary className="cursor-pointer">Already installed? Enter the details manually</summary>
-                <button
-                  type="button"
-                  className="mt-2 text-sky-700 underline"
-                  onClick={() => setStep('configure')}
-                >
-                  Configure manually
-                </button>
-              </details>
-            </div>
-          )}
+        ) : installed ? (
+          <p className="text-sm text-slate-700">
+            GitHub App installed
+            {integration?.installAccountLogin ? (
+              <>
+                {' '}
+                on <code className="rounded bg-slate-100 px-1 text-xs">{integration.installAccountLogin}</code>
+              </>
+            ) : null}
+            . Pick the repo reports should land in.
+          </p>
+        ) : (
+          <p className="text-sm text-slate-600">
+            Install the FixYourDocs GitHub App on the repo where Issues should land.
+          </p>
+        )}
 
-          {step === 'configure' && (
-            <form onSubmit={onConfigureSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="installationId">GitHub installation id</Label>
-                <Input
-                  id="installationId"
-                  value={installationId}
-                  onChange={(e) => setInstallationId(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="e.g. 12345678"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="repoOwner">Repo owner</Label>
-                  <Input
-                    id="repoOwner"
-                    value={repoOwner}
-                    onChange={(e) => setRepoOwner(e.target.value)}
-                    placeholder="acme"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="repoName">Repo name</Label>
-                  <Input
-                    id="repoName"
-                    value={repoName}
-                    onChange={(e) => setRepoName(e.target.value)}
-                    placeholder="docs"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="issueTemplate">Issue template</Label>
-                <textarea
-                  id="issueTemplate"
-                  value={issueTemplate}
-                  onChange={(e) => setIssueTemplate(e.target.value)}
-                  rows={10}
-                  className="block w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-xs shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  Placeholders: <code>{'{doc_url}'}</code>, <code>{'{agent_name}'}</code>,{' '}
-                  <code>{'{report_kind}'}</code>, <code>{'{summary}'}</code>, <code>{'{details}'}</code>.
-                </p>
-              </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              <div className="flex gap-2">
-                <Button type="submit" disabled={save.isPending}>
-                  {save.isPending ? 'Saving…' : 'Save integration'}
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => setStep('install')}>
-                  Back
-                </Button>
-              </div>
-            </form>
-          )}
+        <div>
+          <Button
+            variant={installed ? 'secondary' : 'primary'}
+            onClick={() => startInstall.mutate()}
+            disabled={startInstall.isPending}
+          >
+            {startInstall.isPending ? 'Redirecting…' : installed ? 'Manage GitHub App' : 'Install the GitHub App'}
+          </Button>
+          {installed && <p className="mt-1 text-xs text-slate-500">Add or remove repositories on GitHub.</p>}
+        </div>
 
-          {step === 'done' && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-700">
-                Your integration is live. Reports posted to{' '}
-                <code className="rounded bg-slate-100 px-1 text-xs">
-                  POST {env.HUB_BASE_URL}/v1/reports
-                </code>{' '}
-                will land as Issues on{' '}
-                <code className="rounded bg-slate-100 px-1 text-xs">
-                  {repoOwner}/{repoName}
-                </code>{' '}
-                within a few seconds.
-              </p>
-              <p className="text-sm text-slate-600">
-                Point your agents at the Hub URL, or use one of the SDKs and the AGENTS.md
-                snippet to make this part of every agent run on your docs.
-              </p>
+        <form onSubmit={onSubmit} className="space-y-4 border-t border-slate-100 pt-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="repoOwner">Repo owner</Label>
+              <Input id="repoOwner" value={repoOwner} onChange={(e) => setRepoOwner(e.target.value)} placeholder="acme" required />
             </div>
-          )}
-        </CardBody>
-      </Card>
-    </main>
+            <div>
+              <Label htmlFor="repoName">Repo name</Label>
+              <Input id="repoName" value={repoName} onChange={(e) => setRepoName(e.target.value)} placeholder="docs" required />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="issueTemplate">Issue template</Label>
+            <Textarea
+              id="issueTemplate"
+              value={issueTemplate}
+              onChange={(e) => setIssueTemplate(e.target.value)}
+              rows={10}
+              className="font-mono text-xs"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Placeholders: <code>{'{doc_url}'}</code>, <code>{'{agent_name}'}</code>, <code>{'{report_kind}'}</code>,{' '}
+              <code>{'{summary}'}</code>, <code>{'{details}'}</code>.
+            </p>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={save.isPending || !installed}>
+              {save.isPending ? 'Saving…' : configured ? 'Update integration' : 'Save integration'}
+            </Button>
+            {!installed && <span className="text-xs text-slate-500">Install the app first to enable saving.</span>}
+            {save.isSuccess && !save.isPending && <span className="text-xs text-green-700">Saved.</span>}
+          </div>
+        </form>
+      </CardBody>
+    </Card>
+  );
+}
+
+function DomainsSection({ domains }: { domains: DomainView[] }) {
+  const qc = useQueryClient();
+  const [domain, setDomain] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const claim = useMutation({
+    mutationFn: () => api('/v1/orgs/me/domains', { method: 'POST', body: JSON.stringify({ domain: domain.trim() }) }),
+    onSuccess: () => {
+      setDomain('');
+      setError(null);
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: (err: ApiError) => setError(err.message),
+  });
+
+  const verify = useMutation({
+    mutationFn: (d: string) =>
+      api<{ status: string; hint?: string }>(`/v1/orgs/me/domains/${encodeURIComponent(d)}/verify`, { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+  });
+
+  function onClaim(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    claim.mutate();
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-base font-semibold text-slate-900">Verified domains</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          A report routes to your repo only when its{' '}
+          <code className="rounded bg-slate-100 px-1 text-xs">doc_url</code> is on a domain you've verified you own.
+        </p>
+      </CardHeader>
+      <CardBody className="space-y-5">
+        <form onSubmit={onClaim} className="flex items-end gap-2">
+          <div className="flex-1">
+            <Label htmlFor="domain">Add a domain</Label>
+            <Input id="domain" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="docs.acme.com" required />
+          </div>
+          <Button type="submit" disabled={claim.isPending}>
+            {claim.isPending ? 'Claiming…' : 'Claim domain'}
+          </Button>
+        </form>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        {domains.length === 0 ? (
+          <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+            No domains yet. Claim the domain your docs live on so reports can route to your repo.
+          </p>
+        ) : (
+          <ul className="space-y-4">
+            {domains.map((d) => {
+              const verifying = verify.isPending && verify.variables === d.domain;
+              const hint = verify.variables === d.domain && verify.data?.status === 'pending' ? verify.data.hint : null;
+              return (
+                <li key={d.domain} className="rounded-md border border-slate-200 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <code className="truncate font-mono text-sm text-slate-800">{d.domain}</code>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge status={d.status} />
+                      {d.status !== 'verified' && (
+                        <Button type="button" variant="secondary" size="sm" onClick={() => verify.mutate(d.domain)} disabled={verifying}>
+                          {verifying ? 'Checking…' : 'Verify'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {d.status === 'pending' && d.dns_record && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs text-slate-500">Add this DNS TXT record at your domain host, then click Verify:</p>
+                      <CopyField label="Name" value={d.dns_record.name} />
+                      <CopyField label="Value" value={d.dns_record.value} />
+                      {hint && <p className="text-xs text-amber-700">{hint}</p>}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
   );
 }
