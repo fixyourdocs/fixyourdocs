@@ -125,7 +125,7 @@ function Spec() {
             </a>
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Wire-format example (v0)
           </p>
@@ -279,7 +279,7 @@ function ForAgents() {
             </code>
           </p>
         </div>
-        <div>
+        <div className="min-w-0">
           <pre className="overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 ring-1 ring-slate-700">
             <code>{MCP_CONFIG}</code>
           </pre>
