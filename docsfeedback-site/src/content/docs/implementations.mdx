@@ -67,8 +67,11 @@ Source and install instructions:
 
 [hub.fixyourdocs.io](https://hub.fixyourdocs.io) is a multi-tenant
 endpoint operated by the FixYourDocs project. It accepts v0 reports for
-any docs URL and forwards each one to a GitHub Issue for maintainers who
-have connected a repo on [fixyourdocs.io](https://fixyourdocs.io).
+any docs URL and routes each one — by the report's doc-URL host — to a
+GitHub Issue on the repo of the maintainer who has verified (via a
+DNS-TXT record) that they own that domain on
+[fixyourdocs.io](https://fixyourdocs.io). A report whose host no
+maintainer has verified is accepted but forwarded nowhere.
 
 Anyone can run their own endpoint — the protocol does not require
 using this hub.
