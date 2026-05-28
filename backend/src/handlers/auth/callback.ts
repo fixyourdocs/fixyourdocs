@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyHandlerV2,
@@ -80,10 +80,13 @@ async function resolveUser(email: string, githubId: string): Promise<LinkResult>
     // different account, reject — never split one GitHub identity across two.
     if (linkedUsername) return { reject: 'account_conflict' };
 
+    // Email is a sign-in *alias*, so the username must not be email-format —
+    // generate a UUID and let the email attribute carry the address.
+    const username = randomUUID();
     await cognito.send(
       new AdminCreateUserCommand({
         UserPoolId: userPoolId,
-        Username: email,
+        Username: username,
         MessageAction: 'SUPPRESS',
         UserAttributes: [
           { Name: 'email', Value: email },
@@ -96,13 +99,13 @@ async function resolveUser(email: string, githubId: string): Promise<LinkResult>
     await cognito.send(
       new AdminSetUserPasswordCommand({
         UserPoolId: userPoolId,
-        Username: email,
+        Username: username,
         Password: throwawayPassword(),
         Permanent: true,
       }),
     );
-    await ddb.send(new PutCommand({ TableName: tables.githubLinks, Item: { githubId, username: email } }));
-    return { username: email };
+    await ddb.send(new PutCommand({ TableName: tables.githubLinks, Item: { githubId, username } }));
+    return { username };
   }
 
   const attrs = Object.fromEntries((existing.Attributes ?? []).map((a) => [a.Name, a.Value]));
@@ -184,7 +187,7 @@ export const handler: APIGatewayProxyHandlerV2 = wrapPublic(async (event): Promi
   await ddb.send(
     new PutCommand({
       TableName: tables.oauthState,
-      Item: { pk: pinKey(username, flowId), auth_pin: authPin, ttl: now + PIN_TTL_SECONDS },
+      Item: { pk: pinKey(flowId), auth_pin: authPin, ttl: now + PIN_TTL_SECONDS },
     }),
   );
 
