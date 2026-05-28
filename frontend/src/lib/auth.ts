@@ -1,5 +1,8 @@
 import {
   AuthenticationDetails,
+  CognitoAccessToken,
+  CognitoIdToken,
+  CognitoRefreshToken,
   CognitoUser,
   CognitoUserAttribute,
   CognitoUserPool,
@@ -81,6 +84,30 @@ export function signIn(email: string, password: string): Promise<CognitoUserSess
 
 export function signOut(): void {
   pool.getCurrentUser()?.signOut();
+  notify();
+}
+
+// P3-08 — adopt a Cognito session minted server-side by the GitHub OAuth
+// callback. We write through `amazon-cognito-identity-js`'s own storage so the
+// session is indistinguishable from the SRP path (same localStorage keys,
+// same refresh behaviour). No token ever appears in the URL.
+export function setSessionFromTokens(tokens: {
+  id_token: string;
+  access_token: string;
+  refresh_token?: string | null;
+}): void {
+  const IdToken = new CognitoIdToken({ IdToken: tokens.id_token });
+  const AccessToken = new CognitoAccessToken({ AccessToken: tokens.access_token });
+  const RefreshToken = new CognitoRefreshToken({ RefreshToken: tokens.refresh_token ?? '' });
+  // The library keys storage by the `cognito:username` claim — the same value
+  // AdminInitiateAuth used as USERNAME — so resolve it from the id token.
+  const payload = JSON.parse(atob(tokens.id_token.split('.')[1])) as {
+    'cognito:username'?: string;
+    sub?: string;
+  };
+  const username = payload['cognito:username'] ?? payload.sub ?? '';
+  const user = new CognitoUser({ Username: username, Pool: pool });
+  user.setSignInUserSession(new CognitoUserSession({ IdToken, AccessToken, RefreshToken }));
   notify();
 }
 

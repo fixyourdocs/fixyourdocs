@@ -10,6 +10,7 @@ import { ConfirmEmail } from './pages/ConfirmEmail';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { IntegrationsSetup } from './pages/IntegrationsSetup';
+import { AuthGithubComplete } from './pages/AuthGithubComplete';
 import { Nav } from './components/Nav';
 import { Spinner } from './components/Spinner';
 
@@ -54,6 +55,7 @@ function Shell() {
         <Route path="/signup/confirm" element={<ConfirmEmail />} />
         <Route path="/forgot" element={<ForgotPassword />} />
         <Route path="/reset" element={<ResetPassword />} />
+        <Route path="/auth/github/complete" element={<AuthGithubComplete />} />
         <Route
           path="/integrations/github"
           element={

@@ -42,5 +42,13 @@ export default defineConfig({
             testMatch: /forwarder\.spec\.ts/,
             use: { ...devices['Desktop Chrome'] },
         },
+        {
+            // P3-08 — "Sign in with GitHub". No storageState: this flow mints
+            // its own session. The spec skips itself unless the sandbox env
+            // (HUB_BASE_URL etc.) is present.
+            name: 'github',
+            testMatch: /auth-github\.spec\.ts/,
+            use: { ...devices['Desktop Chrome'] },
+        },
     ],
 });
