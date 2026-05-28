@@ -79,34 +79,34 @@ describe('verify-auth-challenge-response (C1 constant-time)', () => {
 });
 
 describe('create-auth-challenge (C1 fail closed)', () => {
-  const make = (clientMetadata: Record<string, string> | undefined) =>
-    ({ userName: 'user-1', request: { clientMetadata }, response: {} }) as any;
+  const make = (userName: string | undefined = 'user-uuid-1') =>
+    ({ userName, request: {}, response: {} }) as any;
 
   beforeEach(() => sendMock.mockReset());
 
-  it('emits an unsatisfiable random pin when there is no flow_id', async () => {
-    const e = await run(create, make(undefined));
+  it('emits an unsatisfiable random pin when there is no userName', async () => {
+    const e = await run(create, make(''));
     expect(e.response.privateChallengeParameters.pin).toMatch(HEX64);
     expect(sendMock).not.toHaveBeenCalled();
   });
 
   it('emits the seeded pin on a valid row and consumes it', async () => {
     sendMock.mockResolvedValueOnce({ Attributes: { auth_pin: 'realpin', ttl: Math.floor(Date.now() / 1000) + 100 } });
-    const e = await run(create, make({ flow_id: 'f1' }));
+    const e = await run(create, make());
     expect(e.response.privateChallengeParameters.pin).toBe('realpin');
-    expect(sendMock).toHaveBeenCalledTimes(1); // delete-on-read
+    expect(sendMock).toHaveBeenCalledTimes(1); // delete-on-read, keyed by event.userName
   });
 
   it('fails closed (random pin) when the row is missing', async () => {
     sendMock.mockResolvedValueOnce({});
-    const e = await run(create, make({ flow_id: 'f1' }));
+    const e = await run(create, make());
     expect(e.response.privateChallengeParameters.pin).toMatch(HEX64);
     expect(e.response.privateChallengeParameters.pin).not.toBe('realpin');
   });
 
   it('fails closed (random pin) when the row is expired', async () => {
     sendMock.mockResolvedValueOnce({ Attributes: { auth_pin: 'realpin', ttl: Math.floor(Date.now() / 1000) - 1 } });
-    const e = await run(create, make({ flow_id: 'f1' }));
+    const e = await run(create, make());
     expect(e.response.privateChallengeParameters.pin).toMatch(HEX64);
     expect(e.response.privateChallengeParameters.pin).not.toBe('realpin');
   });

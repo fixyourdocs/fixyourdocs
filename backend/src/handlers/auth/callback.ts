@@ -187,7 +187,7 @@ export const handler: APIGatewayProxyHandlerV2 = wrapPublic(async (event): Promi
   await ddb.send(
     new PutCommand({
       TableName: tables.oauthState,
-      Item: { pk: pinKey(flowId), auth_pin: authPin, ttl: now + PIN_TTL_SECONDS },
+      Item: { pk: pinKey(username), auth_pin: authPin, ttl: now + PIN_TTL_SECONDS },
     }),
   );
 
