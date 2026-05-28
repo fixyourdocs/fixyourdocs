@@ -223,7 +223,7 @@ function HowItWorks() {
     {
       icon: <Github size={20} />,
       t: 'Connect your docs repo',
-      d: 'Sign up, install the FixYourDocs GitHub App, and pick the repo where reports should land.',
+      d: 'Sign up, install the FixYourDocs GitHub App, verify your docs domain (a DNS-TXT record), and pick the repo where reports should land.',
     },
     {
       icon: <Send size={20} />,
@@ -233,7 +233,7 @@ function HowItWorks() {
     {
       icon: <CheckCircle2 size={20} />,
       t: 'Reports land as GitHub Issues',
-      d: 'Each report is forwarded to a GitHub Issue on your connected repo, so you triage it with the tools you already use.',
+      d: "Each report whose doc URL is on a domain you've verified is forwarded to a GitHub Issue on your connected repo, so you triage it with the tools you already use.",
     },
   ];
   return (

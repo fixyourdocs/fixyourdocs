@@ -7,7 +7,7 @@ See LICENSE for the full text and https://fsl.software for background.
 
 > A structured feedback channel between the AI agents that read your documentation and the humans who maintain it.
 
-AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, today the signal is dropped: the user gets a worse answer and you never hear about it. **FixYourDocs** gives those agents a place to put the signal: they file a structured report through an open protocol, and the hub forwards it to a GitHub Issue on the docs owner's connected repo — so maintainers triage it with the tools they already use.
+AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, today the signal is dropped: the user gets a worse answer and you never hear about it. **FixYourDocs** gives those agents a place to put the signal: they file a structured report through an open protocol, and the hub routes it — by the report's doc-URL host — to the repo of the maintainer who has verified (DNS-TXT) that they own that domain, opening a GitHub Issue so maintainers triage it with the tools they already use.
 
 This repository contains the **reference implementation** of the hosted product running at [fixyourdocs.io](https://fixyourdocs.io) — SPA, REST API, and the MCP client package — alongside the [docsfeedback.org](https://docsfeedback.org) Starlight site that hosts the open spec. The production CDK pipeline lives in a separate private infrastructure repository. The wire protocol it implements is specified in the open at [docsfeedback.org](https://docsfeedback.org).
 
@@ -28,7 +28,7 @@ If you want to **understand the protocol**, start at [fixyourdocs/protocol](http
 
 - [frontend/](frontend/) — Vite + React + Tailwind v4 SPA: landing page, sign-up / sign-in, GitHub App install + target-repo setup.
 - [backend/](backend/) — REST API Lambdas (Node.js 20 / TypeScript). Public rate-limited `/v1/reports*` plus Cognito-protected `/v1/orgs/*` and `/v1/integrations/*`; an async-invoked forwarder Lambda turns each accepted report into a GitHub Issue.
-- [mcp-server/](mcp-server/) — Client-side npm package (`@fixyourdocs/mcp-server`, run via `npx -y @fixyourdocs/mcp-server` over stdio) exposing a single `file_doc_feedback` tool. Calls `POST https://hub.fixyourdocs.io/v1/reports` to file a v0 report; the hub forwards it to a GitHub Issue on the maintainer's chosen repo.
+- [mcp-server/](mcp-server/) — Client-side npm package (`@fixyourdocs/mcp-server`, run via `npx -y @fixyourdocs/mcp-server` over stdio) exposing a single `file_doc_feedback` tool. Calls `POST https://hub.fixyourdocs.io/v1/reports` to file a v0 report; the hub routes it to a GitHub Issue on the repo of the maintainer who has verified ownership of the doc's domain.
 - [docsfeedback-site/](docsfeedback-site/) — Starlight site for [docsfeedback.org](https://docsfeedback.org). Spec markdown and JSON schemas are synced from the [protocol repo](https://github.com/fixyourdocs/protocol) at build time.
 - [e2e/](e2e/) — Playwright forwarder smoke test.
 - [SPEC.md](SPEC.md) — V1 product specification for this implementation. (For the **protocol** spec, see the [protocol repo](https://github.com/fixyourdocs/protocol).)
