@@ -85,12 +85,13 @@ beforeEach(() => {
 });
 
 describe('GET /v1/integrations/github/install', () => {
-  it('302s to the GitHub App install URL and persists install#<state> -> sub', async () => {
+  it('returns 200 with the GitHub App install URL and persists install#<state> -> sub', async () => {
     sendMock.mockResolvedValueOnce({}); // PutCommand
     const res = await call(installHandler, authEvent({ sub: 'user-1' }));
 
-    expect(res.statusCode).toBe(302);
-    expect(res.headers.location).toMatch(
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body!) as { url: string };
+    expect(body.url).toMatch(
       /^https:\/\/github\.com\/apps\/fixyourdocs\/installations\/new\?state=[0-9a-f]{64}$/,
     );
     const put = sendMock.mock.calls[0][0].input;
@@ -114,7 +115,9 @@ describe('GET /v1/integrations/github/callback', () => {
     );
 
     expect(res.statusCode).toBe(302);
-    expect(res.headers.location).toBe('https://fixyourdocs.io/integrations/github?installed=1');
+    expect(res.headers.location).toBe(
+      'https://fixyourdocs.io/integrations/github?installed=1&installation_id=4242',
+    );
     const put = sendMock.mock.calls[1][0].input;
     expect(put.TableName).toBe('i');
     expect(put.Item.userId).toBe('user-1');

@@ -13,6 +13,21 @@ describe('renderIssue', () => {
     expect(body).toBe('S: broken link\nD: the anchor 404s\nU: https://docs.example.com/p');
   });
 
+  it('substitutes agent_name and report_kind', () => {
+    const { body } = renderIssue('agent={agent_name} kind={report_kind}', {
+      summary: 's',
+      doc_url: 'https://e.com',
+      agent_name: 'claude-code',
+      report_kind: 'outdated',
+    });
+    expect(body).toBe('agent=claude-code kind=outdated');
+  });
+
+  it('renders agent_name/report_kind empty when absent (no throw)', () => {
+    const { body } = renderIssue('[{agent_name}/{report_kind}]', { summary: 's', doc_url: 'https://e.com' });
+    expect(body).toBe('[/]');
+  });
+
   it('derives a [docs]-prefixed title truncated to 120 chars', () => {
     const long = 'x'.repeat(200);
     const { title } = renderIssue('{summary}', { summary: long, doc_url: 'https://e.com' });
