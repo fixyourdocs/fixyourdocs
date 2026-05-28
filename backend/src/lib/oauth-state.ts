@@ -19,3 +19,11 @@
 export const stateKey = (nonce: string): string => `state#${nonce}`;
 export const pinKey = (username: string): string => `pin#${username}`;
 export const handoffKey = (code: string): string => `handoff#${code}`;
+
+// install#<nonce>  CSRF state for the GitHub App install flow (P0-08 Step 5).
+//                 Written authed by integrations/install.ts carrying the
+//                 maintainer's Cognito sub; consumed delete-on-read by the
+//                 unauthenticated integrations/callback.ts to recover the sub.
+//                 Distinct prefix from state# so the sign-in and install flows
+//                 never read each other's rows.
+export const installStateKey = (nonce: string): string => `install#${nonce}`;
