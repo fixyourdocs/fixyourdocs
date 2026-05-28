@@ -223,7 +223,7 @@ function HowItWorks() {
     {
       icon: <Github size={20} />,
       t: 'Connect your docs repo',
-      d: 'Sign up, install the FixYourDocs GitHub App, and pick the repo where reports should land. No DNS records, no domain claim.',
+      d: 'Sign up, install the FixYourDocs GitHub App, and pick the repo where reports should land.',
     },
     {
       icon: <Send size={20} />,
