@@ -10,4 +10,7 @@ export const tables = {
   reports: process.env.REPORTS_TABLE!,
   integrations: process.env.INTEGRATIONS_TABLE!,
   rateLimit: process.env.RATE_LIMIT_TABLE!,
+  // P3-08 — "Sign in with GitHub" (CUSTOM_AUTH).
+  oauthState: process.env.OAUTH_STATE_TABLE!,
+  githubLinks: process.env.GITHUB_LINKS_TABLE!,
 } as const;
