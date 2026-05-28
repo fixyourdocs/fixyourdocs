@@ -7,7 +7,7 @@ import { pinKey } from '../../lib/oauth-state';
 // Issues the CUSTOM_CHALLENGE pin for the "Sign in with GitHub" path (P3-08).
 //
 // The real pin was written to `OAuthState` by auth/callback.ts — keyed by
-// (cognito username, flow_id) — immediately before AdminInitiateAuth.
+// `flow_id` (from clientMetadata) — immediately before AdminInitiateAuth.
 //
 // Fail closed (finding C1): if there is no valid, unexpired pin row, set an
 // unguessable random pin that is NEVER shared with anyone, so the challenge is
@@ -28,7 +28,7 @@ export const handler: CreateAuthChallengeTriggerHandler = async (event) => {
   const consumed = await ddb.send(
     new DeleteCommand({
       TableName: tables.oauthState,
-      Key: { pk: pinKey(event.userName, flowId) },
+      Key: { pk: pinKey(flowId) },
       ReturnValues: 'ALL_OLD',
     }),
   );
