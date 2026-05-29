@@ -1,0 +1,9 @@
+{
+  "protocol_version": "0",
+  "opt_in": true,
+  "endpoint": "https://hub.fixyourdocs.io/v1/reports",
+  "doc_domains": [
+    "docsfeedback.org"
+  ],
+  "contact": "mailto:hello@fixyourdocs.io"
+}
