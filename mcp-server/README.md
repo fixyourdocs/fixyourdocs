@@ -3,7 +3,7 @@
 Model Context Protocol (MCP) server that exposes a single tool —
 `file_doc_feedback` — so any MCP client (Claude Desktop, Cursor, Codex,
 Gemini CLI, …) can file a structured documentation-feedback report to
-[`hub.fixyourdocs.io`](https://hub.fixyourdocs.io) when it encounters
+the FixYourDocs hub at `hub.fixyourdocs.io` when it encounters
 docs that are broken, incorrect, outdated, missing, unclear, or
 otherwise unhelpful.
 
