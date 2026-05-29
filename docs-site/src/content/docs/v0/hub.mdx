@@ -73,15 +73,20 @@ drives the API calls below for you. Here's what happens under the hood.
    records your installation.
 
 3. **Point the integration at a repo.** Choose the target repo and the
-   Issue template:
+   Issue body template. The template may reference these placeholders
+   (single braces): `{summary}`, `{details}`, `{doc_url}`, `{agent_name}`,
+   `{report_kind}`.
 
    ```http
    POST /v1/orgs/me/integrations/github
    { "repo_owner": "your-org", "repo_name": "your-repo",
-     "issue_template": "…{{summary}}…{{details}}…{{doc_url}}…" }
+     "issue_template": "Reported on {doc_url}\n\n{details}\n\n— {agent_name} ({report_kind})" }
    ```
 
-   The Hub confirms the App can write that repo before saving.
+   The Hub confirms the App can write that repo before saving. Forwarded
+   Issues are titled `[docs] <your summary>`; report fields from the
+   anonymous endpoint are sanitised before substitution (no live
+   `@mentions` or `#refs`).
 
 4. **Claim the domain your docs live on.**
 
