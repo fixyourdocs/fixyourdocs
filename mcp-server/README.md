@@ -12,6 +12,7 @@ when they have a FixYourDocs integration installed. No phone-home, no
 telemetry — the server only contacts the hub when an agent explicitly
 calls the tool.
 
+- **Docs:** [docs.fixyourdocs.io/mcp/](https://docs.fixyourdocs.io/mcp/)
 - **Spec:** [Docs Feedback Protocol v0](https://docsfeedback.org)
 - **SDK:** [`@fixyourdocs/sdk`](https://www.npmjs.com/package/@fixyourdocs/sdk)
 - **Issues / contributions:** <https://github.com/fixyourdocs/fixyourdocs>
