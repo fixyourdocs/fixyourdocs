@@ -14,6 +14,14 @@ export function Nav({ authed }: { authed: boolean }) {
         </Link>
         <nav className="flex items-center gap-2 text-sm">
           <a
+            href="https://docs.fixyourdocs.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2 py-1 text-slate-600 hover:text-slate-900"
+          >
+            Docs
+          </a>
+          <a
             href="https://docsfeedback.org"
             target="_blank"
             rel="noopener noreferrer"
