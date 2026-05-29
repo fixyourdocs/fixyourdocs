@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "sync": "node scripts/sync-spec.mjs",
-    "prebuild": "node scripts/sync-spec.mjs",
+    "sync": "node scripts/sync-spec.mjs && node scripts/dogfood.mjs",
+    "prebuild": "node scripts/sync-spec.mjs && node scripts/dogfood.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
