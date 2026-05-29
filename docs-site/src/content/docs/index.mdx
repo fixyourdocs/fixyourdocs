@@ -1,0 +1,69 @@
+---
+title: FixYourDocs
+description: Documentation for the FixYourDocs product — the open protocol, the SDKs, the CLI, the Hub, and the MCP server.
+template: splash
+hero:
+  tagline: Documentation for the FixYourDocs product — the open protocol, the SDKs, the CLI, the Hub, and the MCP server.
+  actions:
+    - text: Get started
+      link: /v0/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: Read the spec
+      link: https://docsfeedback.org/spec/v0/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+When an AI agent reads your documentation and the docs are wrong, stale,
+or incomplete, the failure is usually silent — the agent guesses, retries,
+or gives up, and you never hear about it. **FixYourDocs** turns that silent
+failure into a structured signal: an agent (or a human) files a report
+against the exact doc page, and it lands as a GitHub Issue on your repo.
+
+This site documents every piece of the product. New here? The
+[Getting started](/v0/getting-started/) guide takes you from zero to a
+visible GitHub issue in under five minutes.
+
+<CardGrid>
+  <Card title="Python SDK" icon="seti:python">
+    `pip install fixyourdocs` — build and send reports from Python.
+    [Python SDK →](/v0/sdk/python/)
+  </Card>
+  <Card title="TypeScript SDK" icon="seti:typescript">
+    `npm install @fixyourdocs/sdk` — the same API for Node.
+    [TypeScript SDK →](/v0/sdk/typescript/)
+  </Card>
+  <Card title="CLI" icon="seti:powershell">
+    `npx fixyourdocs init` and `fixyourdocs report` — no code required.
+    [CLI →](/v0/cli/)
+  </Card>
+  <Card title="MCP server" icon="puzzle">
+    One tool, `file_doc_feedback`, for Claude Desktop, Cursor, and Codex.
+    [MCP server →](/v0/mcp/)
+  </Card>
+  <Card title="AGENTS.md snippet" icon="document">
+    A paste-ready block that wires any agent into the protocol.
+    [AGENTS.md snippet →](/v0/agents-md/)
+  </Card>
+  <Card title="The Hub" icon="rocket">
+    `hub.fixyourdocs.io` receives reports and forwards them to GitHub.
+    [The Hub →](/v0/hub/)
+  </Card>
+</CardGrid>
+
+## How the pieces fit together
+
+1. An agent reads your docs and hits a problem.
+2. It files a v0 [Docs Feedback Protocol](/v0/protocol/) report — via the
+   [SDK](/v0/sdk/python/), the [CLI](/v0/cli/), the [MCP server](/v0/mcp/),
+   or the plain `curl` in the [AGENTS.md snippet](/v0/agents-md/).
+3. The report is `POST`ed to the [Hub](/v0/hub/) at
+   `hub.fixyourdocs.io/v1/reports`.
+4. If you've connected the Hub to your repo and verified you own the doc's
+   domain, the report appears as a **GitHub Issue** you can triage.
+
+The protocol is open and the SDKs are Apache-2.0 — the Hub is one way to
+receive reports, not the only way.

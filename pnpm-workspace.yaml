@@ -4,3 +4,4 @@ packages:
   - frontend
   - e2e
   - docsfeedback-site
+  - docs-site

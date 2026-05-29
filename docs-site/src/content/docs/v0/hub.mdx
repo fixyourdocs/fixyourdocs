@@ -1,0 +1,147 @@
+---
+title: The FixYourDocs Hub
+description: What hub.fixyourdocs.io is, the endpoints it exposes, and the full path to receiving docs-feedback reports as GitHub Issues — connect the GitHub App, then verify the domain your docs live on.
+---
+
+import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
+
+The **Hub** at `hub.fixyourdocs.io` is the reference endpoint for the
+[Docs Feedback Protocol](/v0/protocol/). It accepts reports from anyone and
+forwards them to a maintainer's GitHub repository as Issues — but only for
+domains that maintainer has verified they own.
+
+## Sending a report
+
+`POST /v1/reports` is public and unauthenticated. This is the exact call
+every surface makes — SDK, CLI, MCP server, and the AGENTS.md block all
+produce it:
+
+```sh
+curl -X POST https://hub.fixyourdocs.io/v1/reports \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "protocol_version": "0",
+    "doc_url": "<URL or path of the doc you were reading>",
+    "agent":   { "name": "<your agent id, e.g. claude-code>" },
+    "report":  {
+      "kind":    "<broken | incorrect | outdated | missing | unclear | other>",
+      "summary": "<one-line description of the problem>",
+      "details": "<what you expected vs. what the doc said (optional)>"
+    }
+  }'
+```
+
+A well-formed report returns `201 Created` with a report `id`. Duplicate
+reports are de-duplicated rather than rejected.
+
+## How a report becomes a GitHub Issue
+
+The Hub forwards a report to a repository **only when** the report's
+`doc_url` host matches a domain that:
+
+1. a maintainer has **verified they own** (via a DNS-TXT record), and
+2. is bound to a **configured GitHub integration**.
+
+<Aside type="caution" title="Why verification is required">
+`POST /v1/reports` is anonymous and the report carries no account or routing
+field. Matching on a **verified** domain is what lets an anonymous report
+reach the right maintainer without letting anyone open issues on a repo that
+isn't theirs. A report against an unverified domain is accepted (`201`) but
+**not** forwarded — no Issue is created.
+</Aside>
+
+## Become a forwarding target
+
+The fastest path is the web UI: sign in at
+[fixyourdocs.io](https://fixyourdocs.io) and use the settings screen, which
+drives the API calls below for you. Here's what happens under the hood.
+
+<Steps>
+
+1. **Sign in.** Authentication is via the Hub's identity provider (sign in
+   with GitHub at [fixyourdocs.io](https://fixyourdocs.io)). All
+   `/v1/orgs/me/*` calls below require the resulting bearer token.
+
+2. **Install the GitHub App.** The settings UI sends you to install the
+   FixYourDocs GitHub App on the repo that should receive Issues. Behind it:
+
+   ```http
+   GET /v1/integrations/github/install
+   ```
+
+   returns a one-time install URL; after you grant access, the callback
+   records your installation.
+
+3. **Point the integration at a repo.** Choose the target repo and the
+   Issue body template. The template may reference these placeholders
+   (single braces): `{summary}`, `{details}`, `{doc_url}`, `{agent_name}`,
+   `{report_kind}`.
+
+   ```http
+   POST /v1/orgs/me/integrations/github
+   { "repo_owner": "your-org", "repo_name": "your-repo",
+     "issue_template": "Reported on {doc_url}\n\n{details}\n\n— {agent_name} ({report_kind})" }
+   ```
+
+   The Hub confirms the App can write that repo before saving. Forwarded
+   Issues are titled `[docs] <your summary>`; report fields from the
+   anonymous endpoint are sanitised before substitution (no live
+   `@mentions` or `#refs`).
+
+4. **Claim the domain your docs live on.**
+
+   ```http
+   POST /v1/orgs/me/domains
+   { "domain": "docs.your-org.com" }
+   ```
+
+   The response includes the DNS challenge to publish:
+
+   ```json
+   {
+     "domain": "docs.your-org.com",
+     "status": "pending",
+     "dns_record": {
+       "name": "_fixyourdocs-challenge.docs.your-org.com",
+       "type": "TXT",
+       "value": "fyd-verify=<token>"
+     }
+   }
+   ```
+
+5. **Publish the TXT record** in your DNS, exactly as returned (name `=`
+   `_fixyourdocs-challenge.<your-domain>`, value `=` `fyd-verify=<token>`).
+
+6. **Verify.** Once DNS has propagated:
+
+   ```http
+   POST /v1/orgs/me/domains/docs.your-org.com/verify
+   ```
+
+   On a match the domain flips to `verified`. (If the record isn't visible
+   yet you get `status: pending` with a hint — DNS can take a few minutes.)
+
+</Steps>
+
+That's it. From then on, any report whose `doc_url` is on
+`docs.your-org.com` (or a subdomain of a verified registrable domain) is
+forwarded to your repo as a GitHub Issue.
+
+<Aside type="note" title="What you can claim">
+You can verify a specific host (`docs.your-org.com`) or your registrable
+domain (`your-org.com`, which then covers all its subdomains). You cannot
+claim a public suffix (`com`, `github.io`, `pages.dev`) — the Hub rejects
+those.
+</Aside>
+
+## Checking your setup
+
+`GET /v1/orgs/me` returns a snapshot: your integration status (installed /
+configured, target repo) and your domains (with the DNS challenge for any
+still pending). The settings UI renders this for you.
+
+<LinkCard
+  title="See it end-to-end"
+  description="The Getting started guide sends a first report and links back here for the repo setup."
+  href="/v0/getting-started/"
+/>

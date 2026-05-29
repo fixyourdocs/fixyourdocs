@@ -1,0 +1,108 @@
+---
+title: CLI
+description: The fixyourdocs CLI — init to wire a repo, report to send a one-off report. Flag reference and common workflows.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The `fixyourdocs` CLI covers the two one-liners every repo needs: drop the
+AGENTS.md block, and send a report. It ships with **both** SDKs, so run it
+with whichever toolchain you have.
+
+<Tabs syncKey="runtime">
+<TabItem label="Node (npx)">
+
+```sh
+npx fixyourdocs init      # add the AGENTS.md block
+npx fixyourdocs report …  # send a report
+```
+
+Ships with [`@fixyourdocs/sdk`](/v0/sdk/typescript/).
+
+</TabItem>
+<TabItem label="Python (pipx)">
+
+```sh
+pipx run fixyourdocs init      # add the AGENTS.md block
+pipx run fixyourdocs report …  # send a report
+```
+
+Ships with the [`fixyourdocs`](/v0/sdk/python/) Python package.
+
+</TabItem>
+</Tabs>
+
+## `fixyourdocs init`
+
+Adds the canonical [Docs Feedback Protocol](/v0/protocol/) block to your
+repo's agent-instructions file. It auto-detects `AGENTS.md`, `CLAUDE.md`,
+`.cursor/rules`, or `.github/copilot-instructions.md` and appends to
+whichever exists (falling back to creating `AGENTS.md`). Re-running is a
+**no-op** when the block is already present.
+
+```sh
+npx fixyourdocs init               # detect and append
+npx fixyourdocs init --file docs/AGENTS.md   # target a specific file
+```
+
+What it adds is exactly the block documented on the
+[AGENTS.md snippet](/v0/agents-md/) page — there's no other state to
+configure.
+
+## `fixyourdocs report`
+
+Sends a single report to the Hub.
+
+```sh
+npx fixyourdocs report \
+  --doc-url https://example.com/docs/install \
+  --summary "Install fails on macOS 14" \
+  --agent claude-code \
+  --kind broken
+```
+
+### Flags
+
+| Flag | Required | Meaning |
+|---|---|---|
+| `--doc-url <url>` | yes | The doc page the report is about. |
+| `--summary <text>` | yes | One-line description of the problem. |
+| `--agent <name>` | yes | Reporting agent id (e.g. `claude-code`). |
+| `--kind <kind>` | yes | `broken`, `incorrect`, `outdated`, `missing`, `unclear`, `other`. |
+| `--details <text>` | no | What you expected vs. what the doc said. |
+| `--suggested-fix <text>` | no | A proposed correction. |
+| `--api-url <url>` | no | Override the Hub endpoint (default `https://hub.fixyourdocs.io`). |
+| `--token <token>` | no | Bearer token, if the endpoint requires auth. |
+| `--json` | no | Machine-readable output. |
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success. |
+| `2` | User error (unknown / missing flag). |
+| `1` | Transport or server error. |
+
+## Common workflows
+
+**One-off report.** The `report` command above — nothing to install
+beyond `npx`/`pipx`.
+
+**CI usage.** Fail a docs-lint job and file a report in one step. Use
+`--json` to capture the report id, and check the exit code:
+
+```sh
+npx fixyourdocs report --json \
+  --doc-url "$DOC_URL" --summary "$SUMMARY" --agent ci --kind broken \
+  || echo "report failed (exit $?)"
+```
+
+**"What does `init` add to my repo?"** Just the AGENTS.md block — a
+Markdown section telling agents how to file reports. It changes no code and
+adds no dependency. Commit the modified `AGENTS.md` and you're done.
+
+<Aside type="note">
+The CLI is a thin wrapper over the SDKs. Anything the CLI sends, the
+[Python](/v0/sdk/python/) and [TypeScript](/v0/sdk/typescript/) SDKs can
+send programmatically.
+</Aside>

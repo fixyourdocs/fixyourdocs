@@ -1,0 +1,59 @@
+---
+title: Versioning
+description: How docs versions map to product versions, what the /v0/ and /v1/ URLs guarantee, and how to pin a citation to a fixed version.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+These docs are versioned so that links in blog posts, screencasts, and books
+keep working as the product evolves.
+
+## How versions map
+
+Today the docs track the **protocol** major version:
+
+| Docs version | Tracks | URL |
+|---|---|---|
+| `v0.x` | Docs Feedback Protocol `v0` | `/v0/` |
+
+The latest content always lives under `/v0/`, and the site root
+(`/getting-started`, `/sdk/python`, …) redirects there. When a new major
+line ships, it gets its own prefix (`/v1/`) and the "latest" pointer moves —
+older prefixes stay live.
+
+## What the version URLs guarantee
+
+- **`/v0/...`** — the current `v0` line. Patch fixes (typos, broken links,
+  clarifications) land here continuously.
+- **`/v0.1/`, `/v0.2/`, …** — frozen snapshots cut at a release tag. A
+  pinned URL keeps showing what the docs said at that tag, even after the
+  current `v0` line moves on.
+
+So `/v0/getting-started/` is "getting started, latest v0"; a pinned
+`/v0.1/getting-started/` is "getting started, exactly as of the `docs-v0.1`
+release."
+
+## Release cadence
+
+- A **new doc version** is cut on protocol minor bumps (`v0` → `v1`) and on
+  any breaking SDK/CLI change.
+- **Patch fixes** ship straight to the current version with no new tag.
+
+Each release is a git tag (`docs-v0.1`, `docs-v0.2`, …) on `main`; cutting it
+freezes a copy of the content folder so the pinned URL stops moving.
+
+## Pinning a citation
+
+When you quote these docs somewhere durable, link the **pinned** version,
+not the latest:
+
+```text
+✅  https://docs.fixyourdocs.io/v0.1/getting-started/   (frozen at docs-v0.1)
+⚠️  https://docs.fixyourdocs.io/getting-started/        (always "latest")
+```
+
+<Aside type="tip">
+Writing a quick blog post and want it to age well? Grab the pinned URL from
+the version note at the top of a frozen page, or build it yourself:
+`/v<release>/<page>/`.
+</Aside>

@@ -1,0 +1,40 @@
+---
+title: File a docs-feedback report
+description: Tell us when a page on this site is wrong, missing, or out of date — the same Docs Feedback Protocol report an agent would file, sent straight to our GitHub issues.
+---
+
+import ReportForm from '../../../components/ReportForm.astro';
+import { Aside } from '@astrojs/starlight/components';
+
+Found something wrong, missing, or out of date on this site? File a report.
+This is the protocol dogfooding itself: your report becomes a GitHub Issue
+the maintainers triage.
+
+<ReportForm />
+
+<Aside type="tip" title="Reached here from a page's footer?">
+The "File a docs-feedback report" link in the footer pre-fills the URL above
+with the page you were reading.
+</Aside>
+
+## Prefer the command line?
+
+Same report, no browser:
+
+```sh
+curl -X POST https://hub.fixyourdocs.io/v1/reports \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "protocol_version": "0",
+    "doc_url": "https://docs.fixyourdocs.io/v0/<the-page>/",
+    "agent":   { "name": "your-name-or-agent" },
+    "report":  {
+      "kind":    "unclear",
+      "summary": "One line on what was wrong",
+      "details": "What you expected vs. what the page said (optional)"
+    }
+  }'
+```
+
+A `201` response with a report `id` means we got it. See the
+[protocol primer](/v0/protocol/) for what each field means.

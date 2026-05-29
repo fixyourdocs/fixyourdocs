@@ -1,0 +1,104 @@
+---
+title: MCP server
+description: The @fixyourdocs/mcp-server exposes one tool, file_doc_feedback, over MCP stdio — wire it into Claude Desktop, Cursor, or Codex with one config block.
+---
+
+import { Tabs, TabItem, Aside, LinkCard } from '@astrojs/starlight/components';
+
+`@fixyourdocs/mcp-server` is a Model Context Protocol server that exposes a
+**single tool** — `file_doc_feedback` — so any MCP client can file a
+[Docs Feedback Protocol](/v0/protocol/) report as one tool call when it hits
+broken, incorrect, outdated, missing, or unclear docs.
+
+No phone-home, no telemetry: the server contacts the Hub only when an agent
+explicitly calls the tool.
+
+## Run it
+
+It's designed to run via `npx`, so there's nothing to install up front —
+your client launches it on demand over the standard MCP stdio transport:
+
+```sh
+npx -y @fixyourdocs/mcp-server
+```
+
+## Wire it into your client
+
+Each client has its own config file, but the shape is the same: a named
+server entry with `command` + `args`.
+
+<Tabs syncKey="mcp-client">
+
+<TabItem label="Claude Desktop">
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
+(macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```jsonc
+{
+  "mcpServers": {
+    "fixyourdocs": {
+      "command": "npx",
+      "args": ["-y", "@fixyourdocs/mcp-server"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop — `file_doc_feedback` should appear in the tool list.
+
+</TabItem>
+
+<TabItem label="Cursor">
+
+Edit `~/.cursor/mcp.json` (or your workspace's `.cursor/mcp.json`):
+
+```jsonc
+{
+  "mcpServers": {
+    "fixyourdocs": {
+      "command": "npx",
+      "args": ["-y", "@fixyourdocs/mcp-server"]
+    }
+  }
+}
+```
+
+</TabItem>
+
+<TabItem label="Codex">
+
+Edit `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.fixyourdocs]
+command = "npx"
+args = ["-y", "@fixyourdocs/mcp-server"]
+```
+
+</TabItem>
+
+</Tabs>
+
+## Verify it
+
+Use the MCP inspector to list the tool and send a fixture report:
+
+```sh
+npx @modelcontextprotocol/inspector npx -y @fixyourdocs/mcp-server
+```
+
+The inspector UI lists `file_doc_feedback`, accepts a report, and shows the
+`{ id, url }` returned by the Hub.
+
+<Aside type="note">
+The server is registered in the MCP Registry as `io.fixyourdocs/mcp-server`.
+Reports go to `hub.fixyourdocs.io`; they become GitHub Issues once the doc
+owner has connected the [Hub](/v0/hub/) and verified their domain.
+</Aside>
+
+<LinkCard
+  title="Tool schema & environment variables"
+  description="The mcp-server README documents the full file_doc_feedback schema and how to point at a different hub."
+  href="https://github.com/fixyourdocs/fixyourdocs/tree/main/mcp-server"
+/>

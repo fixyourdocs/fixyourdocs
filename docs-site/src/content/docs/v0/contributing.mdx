@@ -1,0 +1,69 @@
+---
+title: Contributing
+description: How to contribute to FixYourDocs — the DCO sign-off and Apache ICLA, where the code lives, and how to file a docs-feedback report against these very docs.
+---
+
+import { LinkCard, Aside } from '@astrojs/starlight/components';
+
+FixYourDocs is open source. The protocol, both SDKs, the CLI, the AGENTS.md
+snippet, and the product code are public on GitHub.
+
+## Sign-offs: DCO + Apache ICLA
+
+Contributions require two things:
+
+- A **DCO sign-off** on every commit (`git commit -s`), which adds a
+  `Signed-off-by:` trailer asserting you have the right to submit the work
+  under the project's licence.
+- A signed **Apache Individual Contributor License Agreement (ICLA)**. The
+  CLA Assistant bot checks this automatically on your first pull request and
+  links you to sign — it's a one-time step.
+
+Both are standard for Apache-licensed projects and keep the provenance of
+every change clear.
+
+## Where the code lives
+
+| Repo | What |
+|---|---|
+| [`protocol`](https://github.com/fixyourdocs/protocol) | The v0 spec + JSON Schemas |
+| [`sdk-python`](https://github.com/fixyourdocs/sdk-python) | Python SDK + CLI |
+| [`sdk-typescript`](https://github.com/fixyourdocs/sdk-typescript) | TypeScript SDK + CLI |
+| [`agents-md-snippet`](https://github.com/fixyourdocs/agents-md-snippet) | The canonical AGENTS.md block |
+| [`fixyourdocs`](https://github.com/fixyourdocs/fixyourdocs) | The product: Hub, MCP server, and this docs site |
+
+This site's source is the `docs-site/` workspace in the
+[`fixyourdocs`](https://github.com/fixyourdocs/fixyourdocs) repo. The prose
+is [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) so you can quote
+it freely; the site code follows the repo's source licence.
+
+<LinkCard
+  title="Contribution guidelines"
+  description="The org-wide CONTRIBUTING and Code of Conduct."
+  href="https://github.com/fixyourdocs/.github"
+/>
+
+## Found a problem in these docs?
+
+This is the part we most want you to use — because this docs site
+**dogfoods the protocol**. If a page here is broken, incorrect, outdated, or
+unclear, don't open a generic issue: file a structured
+[Docs Feedback Protocol](/v0/protocol/) report against the exact page. Use
+the form on the [report page](/v0/report/) (the "File a docs-feedback report"
+link in the footer of every page pre-fills it with the URL you were on), or
+the plain `curl`:
+
+```sh
+curl -X POST https://hub.fixyourdocs.io/v1/reports \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "protocol_version": "0",
+    "doc_url": "https://docs.fixyourdocs.io/v0/<the-page>/",
+    "agent":   { "name": "your-name-or-agent" },
+    "report":  { "kind": "unclear", "summary": "What was wrong" }
+  }'
+```
+
+`docs.fixyourdocs.io` is a verified domain bound to this repo, so your report
+lands as a GitHub Issue the maintainers triage — the same loop every other
+docs target uses. If the protocol can't fix its own docs, it doesn't work.
