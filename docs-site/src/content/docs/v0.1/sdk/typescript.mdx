@@ -1,0 +1,108 @@
+---
+banner:
+  content: |
+    📌 Pinned snapshot of <strong>docs v0.1</strong> (frozen at the <code>docs-v0.1</code> release). The latest docs live at the same page under <code>/v0/</code>.
+slug: "v0.1/sdk/typescript"
+title: TypeScript SDK
+description: Install @fixyourdocs/sdk, build a report with buildReport, and send it to the Hub.
+---
+
+import { Aside, LinkCard } from '@astrojs/starlight/components';
+
+The reference TypeScript SDK for the [Docs Feedback Protocol](/v0.1/protocol/).
+Package name: **`@fixyourdocs/sdk`**. Requires Node.js 20+ (uses the
+built-in global `fetch`; no runtime dependencies).
+
+## Install
+
+```sh
+npm install @fixyourdocs/sdk
+```
+
+## Send a report
+
+`buildReport` takes flat, ergonomic input and validates lengths and
+patterns locally, so most shape mistakes throw before the network round-trip.
+
+```ts
+import { Client, buildReport } from "@fixyourdocs/sdk";
+
+const client = new Client({
+  apiUrl: "https://hub.fixyourdocs.io",
+  // token: "<opaque-bearer-token>", // optional — only if the endpoint requires auth
+});
+
+const report = buildReport({
+  docUrl: "https://docs.example.com/s3/quickstart",
+  summary: "ListBuckets returns AccessDenied with the IAM policy from the quickstart.",
+  kind: "incorrect",
+  agentName: "claude-code",
+  agentVersion: "1.4.2",
+  agentVendor: "Anthropic",
+  evidence: [
+    { kind: "attempted_action", text: "aws s3 ls" },
+    { kind: "error_message", text: "An error occurred (AccessDenied) when calling the ListBuckets operation" },
+  ],
+  suggestedFix: "Add `s3:ListAllMyBuckets` to the policy in step 3.",
+});
+
+const result = await client.send(report);
+console.log(result.id, result.isDuplicate ? "(duplicate)" : "(new)");
+```
+
+## Build the wire-format object directly
+
+Prefer to construct the nested wire-format object by hand? The underlying
+types are exported too:
+
+```ts
+import { Client, type Report } from "@fixyourdocs/sdk";
+
+const report: Report = {
+  protocol_version: "0",
+  doc_url: "https://docs.example.com/getting-started",
+  agent: { name: "aider" },
+  report: {
+    kind: "missing",
+    summary: "The page does not document how to set the AIDER_API_KEY env var.",
+  },
+};
+
+const client = new Client({ apiUrl: "https://hub.fixyourdocs.io" });
+await client.send(report, { idempotencyKey: "01HZA4F8PD9YQF1XGM3KQ8E5VR" });
+```
+
+Both paths go through `Client.send(report, opts?)`.
+
+## Errors
+
+`Client.send` throws subclasses of `FixYourDocsError`:
+
+| Class | HTTP status |
+|---|---|
+| `ValidationError` | 400 |
+| `AuthError` | 401 |
+| `NotFoundError` | 404 |
+| `OptedOutError` | 410 |
+| `PayloadTooLargeError` | 413 |
+| `UnsupportedMediaTypeError` | 415 |
+| `PolicyRejectedError` | 422 |
+| `RateLimitedError` | 429 |
+| `ServerError` | 5xx |
+
+Where the response carries extra context, the typed error exposes it
+(`OptedOutError.since`, `PolicyRejectedError.reason`,
+`RateLimitedError.retryAfter`, `ValidationError.details`). The client
+retries once on 502/503/504; it does **not** auto-retry on 429 — respect
+`RateLimitedError.retryAfter`.
+
+<Aside type="tip">
+The package also ships the `fixyourdocs` CLI (`npx fixyourdocs init`,
+`npx fixyourdocs report`). See the [CLI guide](/v0.1/cli/).
+</Aside>
+
+<LinkCard
+  title="Full API reference"
+  description="The sdk-typescript README covers every option, the exported types, and the typed error surface."
+  href="https://github.com/fixyourdocs/sdk-typescript"
+/>
