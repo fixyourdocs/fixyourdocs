@@ -1,0 +1,33 @@
+---
+// Starlight Footer override. Renders the default footer, then adds a
+// "Found a problem?" link wired to the on-site report form. This is the
+// docs site dogfooding the Docs Feedback Protocol: every page invites the
+// reader (human or agent) to file a structured report about that page.
+import Default from '@astrojs/starlight/components/Footer.astro';
+---
+
+<Default><slot /></Default>
+
+<p class="fyd-report-cta">
+  Found something wrong, missing, or out of date on this page?
+  <a href="/v0/report/" data-fyd-report>File a docs-feedback report&nbsp;→</a>
+</p>
+
+<script>
+  // Pre-fill the report form's `doc_url` with the page the reader is on.
+  for (const a of document.querySelectorAll<HTMLAnchorElement>('a[data-fyd-report]')) {
+    const target = new URL(a.getAttribute('href') || '/v0/report/', location.origin);
+    target.searchParams.set('doc_url', location.href);
+    a.setAttribute('href', target.pathname + target.search);
+  }
+</script>
+
+<style>
+  .fyd-report-cta {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sl-color-gray-5);
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+</style>

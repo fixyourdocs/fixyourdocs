@@ -1,0 +1,220 @@
+---
+title: Getting started
+description: From "never heard of this" to a docs-feedback report visible in a GitHub issue, in under five minutes — for Python developers, TypeScript developers, and agent authors.
+---
+
+import { Tabs, TabItem, Steps, Aside, LinkCard } from '@astrojs/starlight/components';
+
+This is the five-minute path. Pick the tab that matches how you work. Each
+one is end-to-end: install, send a report, and confirm it landed.
+
+There are **two milestones**:
+
+1. **Send a report** and get a report `id` back from the Hub. This proves
+   the protocol path works — it takes a minute and needs no setup.
+2. **Receive reports as GitHub Issues** on your own repo. This needs a
+   one-time Hub setup (connect the GitHub App, verify your domain). It's
+   covered at the end and links to the [Hub guide](/v0/hub/).
+
+<Tabs syncKey="audience">
+
+<TabItem label="Python">
+
+<Steps>
+
+1. **Install the SDK.**
+
+   ```sh
+   pip install fixyourdocs
+   ```
+
+   Requires Python 3.9+.
+
+2. **Send your first report.**
+
+   ```python
+   from fixyourdocs import Client, Report
+
+   report = Report.create(
+       doc_url="https://docs.example.com/getting-started",
+       summary="The page does not document how to set the API_KEY env var.",
+       kind="missing",
+       agent_name="my-agent",
+   )
+
+   with Client(api_url="https://hub.fixyourdocs.io") as client:
+       result = client.send(report)
+
+   print(result.id, result.is_duplicate)
+   ```
+
+   A successful call prints a report `id` (a ULID). That's the Hub
+   confirming it accepted your report (`201 Created`).
+
+   Prefer the command line? The same thing without writing code:
+
+   ```sh
+   pipx run fixyourdocs report \
+     --doc-url https://docs.example.com/getting-started \
+     --summary "The page does not document how to set the API_KEY env var." \
+     --agent my-agent \
+     --kind missing
+   ```
+
+</Steps>
+
+</TabItem>
+
+<TabItem label="TypeScript">
+
+<Steps>
+
+1. **Install the SDK.**
+
+   ```sh
+   npm install @fixyourdocs/sdk
+   ```
+
+   Requires Node.js 20+ (the SDK uses the built-in global `fetch`; no
+   runtime dependencies).
+
+2. **Send your first report.**
+
+   ```ts
+   import { Client, buildReport } from "@fixyourdocs/sdk";
+
+   const client = new Client({ apiUrl: "https://hub.fixyourdocs.io" });
+
+   const report = buildReport({
+     docUrl: "https://docs.example.com/getting-started",
+     summary: "The page does not document how to set the API_KEY env var.",
+     kind: "missing",
+     agentName: "my-agent",
+   });
+
+   const result = await client.send(report);
+   console.log(result.id, result.isDuplicate ? "(duplicate)" : "(new)");
+   ```
+
+   A successful call logs a report `id` (a ULID) — the Hub confirming it
+   accepted your report (`201 Created`).
+
+   No code? The CLI ships with the SDK:
+
+   ```sh
+   npx fixyourdocs report \
+     --doc-url https://docs.example.com/getting-started \
+     --summary "The page does not document how to set the API_KEY env var." \
+     --agent my-agent \
+     --kind missing
+   ```
+
+</Steps>
+
+</TabItem>
+
+<TabItem label="Agent">
+
+You're wiring an AI coding agent so it files reports on its own when it
+hits broken docs. There's nothing to install on the agent side — pick the
+path that matches your client.
+
+<Steps>
+
+1. **Drop the AGENTS.md block into your repo.**
+
+   ```sh
+   npx fixyourdocs init
+   ```
+
+   This appends the canonical [Docs Feedback Protocol](/v0/protocol/) block
+   to your `AGENTS.md` (or `CLAUDE.md`, `.cursor/rules`, or
+   `.github/copilot-instructions.md`). Any agent that reads that file now
+   knows how to file a report. See the [AGENTS.md snippet](/v0/agents-md/)
+   page for what the block contains.
+
+2. **Or add the MCP server** for MCP-aware clients (Claude Desktop, Cursor,
+   Codex). Add this to your client's MCP config:
+
+   ```jsonc
+   {
+     "mcpServers": {
+       "fixyourdocs": {
+         "command": "npx",
+         "args": ["-y", "@fixyourdocs/mcp-server"]
+       }
+     }
+   }
+   ```
+
+   The agent gets one tool, `file_doc_feedback`. Full per-client config is
+   on the [MCP server](/v0/mcp/) page.
+
+3. **Confirm the path works** by sending a report by hand — the exact call
+   the agent will make:
+
+   ```sh
+   curl -X POST https://hub.fixyourdocs.io/v1/reports \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "protocol_version": "0",
+       "doc_url": "https://docs.example.com/getting-started",
+       "agent":   { "name": "claude-code" },
+       "report":  {
+         "kind":    "missing",
+         "summary": "The page does not document how to set the API_KEY env var."
+       }
+     }'
+   ```
+
+   You get back `{ "id": "...", ... }` with HTTP `201` — the Hub accepted it.
+
+</Steps>
+
+</TabItem>
+
+</Tabs>
+
+## Make reports show up as GitHub Issues
+
+So far the Hub has *accepted* your reports (it returns `201` and a report
+`id`), but it hasn't created a GitHub Issue. That's by design: the Hub only
+forwards a report to a repo when the report's `doc_url` host matches a
+domain **you have verified you own** and bound to a GitHub integration.
+This keeps anyone from filing issues against a repo that isn't theirs.
+
+<Aside type="caution" title="A 201 is not yet an Issue">
+A report against a domain nobody has verified is accepted and de-duplicated,
+but it is **not** forwarded — no Issue is created. To close the loop you
+must connect your repo and verify your domain. This is a one-time setup.
+</Aside>
+
+The one-time setup, in three moves:
+
+<Steps>
+
+1. **Sign in** at [fixyourdocs.io](https://fixyourdocs.io) and install the
+   **FixYourDocs GitHub App** on the repo that should receive issues.
+
+2. **Verify the domain** your docs live on by adding a single DNS `TXT`
+   record the Hub gives you.
+
+3. **Point the integration** at your repo + an issue label.
+
+</Steps>
+
+The [Hub guide](/v0/hub/) walks through each call and the exact DNS record.
+Once it's done, the next report against a doc on your verified domain shows
+up at `https://github.com/<your-org>/<your-repo>/issues`.
+
+<LinkCard
+  title="Connect the Hub to your repo"
+  description="The GitHub App, domain verification, and label routing — step by step."
+  href="/v0/hub/"
+/>
+
+## What's next
+
+- Understand the wire format and the four report fields → [Protocol primer](/v0/protocol/)
+- Browse the full SDK API → [Python](/v0/sdk/python/) · [TypeScript](/v0/sdk/typescript/)
+- Wire every agent run in a repo → [AGENTS.md snippet](/v0/agents-md/)

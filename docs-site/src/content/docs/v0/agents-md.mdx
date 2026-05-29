@@ -1,0 +1,85 @@
+---
+title: AGENTS.md snippet
+description: The paste-ready AGENTS.md block that wires any AI coding agent into the Docs Feedback Protocol — what it is, where it goes, and how to keep it current.
+---
+
+import { Aside, LinkCard } from '@astrojs/starlight/components';
+
+Agents already read `AGENTS.md` (Cursor, Claude Code, Codex, Gemini CLI,
+Copilot, …). One paste-ready block turns every agent run on your repo into a
+structured signal about what's wrong with your docs — without changing any
+agent.
+
+## The block
+
+Append this to your repo's `AGENTS.md` (or `CLAUDE.md`, `.cursor/rules`, or
+`.github/copilot-instructions.md`):
+
+````markdown
+## Documentation feedback
+
+If you find documentation in this repository that is broken, incorrect,
+outdated, or incomplete while performing a task, file a structured report
+via the Docs Feedback Protocol. This helps the maintainers fix the docs
+for the next agent (or human) that hits the same issue.
+
+How to file a report:
+
+    curl -X POST https://hub.fixyourdocs.io/v1/reports \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "protocol_version": "0",
+        "doc_url": "<URL or path of the doc you were reading>",
+        "agent":   { "name": "<your agent id, e.g. claude-code>" },
+        "report":  {
+          "kind":    "<broken | incorrect | outdated | missing | unclear | other>",
+          "summary": "<one-line description of the problem>",
+          "details": "<what you expected vs. what the doc said (optional)>"
+        }
+      }'
+
+Spec: https://docsfeedback.org
+````
+
+This is the **canonical wording**. This very docs site dogfoods it — read
+the copy we serve at [`/AGENTS.md`](/AGENTS.md).
+
+## Where to paste it
+
+Any agent-instructions file your repo already uses:
+
+- `AGENTS.md` (the cross-tool standard)
+- `CLAUDE.md`
+- `.cursor/rules`
+- `.github/copilot-instructions.md`
+
+## Install it for me
+
+```sh
+npx fixyourdocs init      # Node
+pipx run fixyourdocs init # Python
+```
+
+The [CLI](/v0/cli/) detects whichever file your repo uses and appends the
+block. Re-running is a no-op when it's already present.
+
+## Keeping it current
+
+The block is stable across patch releases, but the canonical copy lives in
+one repo so every surface stays in sync. Other repositories embed it by
+**SHA-pinned drift check** rather than hand-copy, so a change to the
+canonical block is caught everywhere. If you pasted it by hand, re-run
+`fixyourdocs init` after a protocol bump to refresh.
+
+<Aside type="note">
+The snippet lets an agent **send** a report. To **receive** those reports as
+GitHub Issues, connect the [Hub](/v0/hub/) to your repo and verify your
+domain — the snippet is the agent-side integration; the Hub is the
+maintainer-side one.
+</Aside>
+
+<LinkCard
+  title="agents-md-snippet — the canonical source"
+  description="The repo that owns the block, plus the drift-check workflow other repos use."
+  href="https://github.com/fixyourdocs/agents-md-snippet"
+/>

@@ -1,0 +1,130 @@
+---
+// Client-side docs-feedback form. Submits a v0 Docs Feedback Protocol report
+// to the public Hub. The same POST an agent would make via curl/SDK/MCP —
+// this is the human-reporter path for the dogfood loop.
+//
+// CORS note: POST /v1/reports returns `access-control-allow-origin: *`, but the
+// API Gateway preflight (OPTIONS, triggered by `Content-Type: application/json`)
+// is scoped to the Hub's configured origins. `https://docs.fixyourdocs.io` must
+// be in that allow-list for this browser form to succeed; the curl fallback
+// shown below always works because it is a server-to-server request.
+const HUB_ENDPOINT = 'https://hub.fixyourdocs.io/v1/reports';
+---
+
+<form class="fyd-report-form" data-hub={HUB_ENDPOINT}>
+  <label>
+    Documentation URL
+    <input name="doc_url" type="url" required placeholder="https://docs.fixyourdocs.io/v0/..." />
+  </label>
+  <label>
+    What kind of problem?
+    <select name="kind" required>
+      <option value="broken">broken</option>
+      <option value="incorrect">incorrect</option>
+      <option value="outdated">outdated</option>
+      <option value="missing">missing</option>
+      <option value="unclear" selected>unclear</option>
+      <option value="other">other</option>
+    </select>
+  </label>
+  <label>
+    One-line summary
+    <input name="summary" type="text" required maxlength="200" placeholder="The install step skips setting API_KEY" />
+  </label>
+  <label>
+    Details (optional)
+    <textarea name="details" rows="4" placeholder="What you expected vs. what the doc said"></textarea>
+  </label>
+  <button type="submit">Send report</button>
+  <p class="fyd-report-status" role="status" aria-live="polite"></p>
+</form>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('.fyd-report-form');
+  if (form) {
+    const status = form.querySelector<HTMLParagraphElement>('.fyd-report-status')!;
+    const docUrlInput = form.querySelector<HTMLInputElement>('input[name="doc_url"]')!;
+
+    // Footer links arrive with ?doc_url=<page they were on>. Pre-fill it.
+    const prefill = new URL(location.href).searchParams.get('doc_url');
+    if (prefill) docUrlInput.value = prefill;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = new FormData(form);
+      const payload = {
+        protocol_version: '0',
+        doc_url: String(data.get('doc_url') || ''),
+        agent: { name: 'docs-site-web-form' },
+        report: {
+          kind: String(data.get('kind') || 'other'),
+          summary: String(data.get('summary') || ''),
+          details: String(data.get('details') || '') || undefined,
+        },
+      };
+      status.textContent = 'Sending…';
+      try {
+        const res = await fetch(form.dataset.hub!, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const body = await res.json().catch(() => ({}));
+          status.textContent = `Thanks — report accepted${body.id ? ` (id ${body.id})` : ''}.`;
+          form.reset();
+        } else {
+          status.textContent = `Hub returned ${res.status}. You can also file via the curl command below.`;
+        }
+      } catch {
+        status.textContent =
+          'Could not reach the Hub from the browser (CORS or network). Use the curl command below instead.';
+      }
+    });
+  }
+</script>
+
+<style>
+  .fyd-report-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 40rem;
+    margin-block: 1rem;
+  }
+  .fyd-report-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-weight: 600;
+    font-size: var(--sl-text-sm);
+  }
+  .fyd-report-form input,
+  .fyd-report-form select,
+  .fyd-report-form textarea {
+    padding: 0.5rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.375rem;
+    background: var(--sl-color-black);
+    color: var(--sl-color-white);
+    font: inherit;
+    font-weight: 400;
+  }
+  .fyd-report-form button {
+    align-self: start;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    background: var(--sl-color-accent);
+    color: var(--sl-color-accent-high) ;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .fyd-report-status:empty {
+    display: none;
+  }
+  .fyd-report-status {
+    font-weight: 600;
+    color: var(--sl-color-accent-high);
+  }
+</style>

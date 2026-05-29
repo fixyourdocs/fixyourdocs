@@ -1,0 +1,20 @@
+{
+  "name": "@fyd/docs-site",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "sync": "node scripts/sync-snippets.mjs && node scripts/well-known.mjs",
+    "prebuild": "node scripts/sync-snippets.mjs && node scripts/well-known.mjs",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.39.2",
+    "astro": "^6.3.1",
+    "sharp": "^0.34.5"
+  }
+}
