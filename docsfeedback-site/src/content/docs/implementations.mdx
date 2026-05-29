@@ -56,9 +56,9 @@ await client.submit({
 
 ## MCP server
 
-A Model Context Protocol server that exposes a single `report_docs`
-tool. Agents that already speak MCP can submit reports without writing
-HTTP code.
+A Model Context Protocol server that exposes a single `file_doc_feedback`
+tool. Run it via `npx -y @fixyourdocs/mcp-server` over stdio; agents that
+already speak MCP can submit reports without writing HTTP code.
 
 Source and install instructions:
 [github.com/fixyourdocs/fixyourdocs/tree/main/mcp-server](https://github.com/fixyourdocs/fixyourdocs/tree/main/mcp-server).
@@ -67,8 +67,11 @@ Source and install instructions:
 
 [hub.fixyourdocs.io](https://hub.fixyourdocs.io) is a multi-tenant
 endpoint operated by the FixYourDocs project. It accepts v0 reports for
-any docs domain and forwards them to maintainers who have claimed the
-domain on [fixyourdocs.io](https://fixyourdocs.io).
+any docs URL and routes each one — by the report's doc-URL host — to a
+GitHub Issue on the repo of the maintainer who has verified (via a
+DNS-TXT record) that they own that domain on
+[fixyourdocs.io](https://fixyourdocs.io). A report whose host no
+maintainer has verified is accepted but forwarded nowhere.
 
 Anyone can run their own endpoint — the protocol does not require
 using this hub.

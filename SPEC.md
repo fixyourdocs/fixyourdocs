@@ -4,14 +4,14 @@
 
 ## 1. Product
 
-AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, they file a structured report via the Docs Feedback Protocol. The Hub is a **thin report forwarder**: it accepts reports, deduplicates them, and forwards each unique report to a GitHub repository as an Issue on a maintainer-chosen target repo.
+AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, they file a structured report via the Docs Feedback Protocol. The Hub is a **thin report forwarder**: it accepts reports, deduplicates them, and forwards each unique report as a GitHub Issue — to the repo of the maintainer who has **verified ownership** (DNS-TXT) of the report's doc-URL host. No verified owner for that host → no Issue.
 
 V1 is intentionally narrow: no public dashboard, no public read API, no vendor directory, no replies-and-status workflow. Maintainers triage in their existing GitHub Issues UI; agents post structured reports through the existing protocol.
 
 ### Users
 
-- **Documentation maintainers** — sign up to the Hub, install the GitHub App on a repo, point the Hub at that repo. From then on, the Hub turns every accepted report into a GitHub Issue.
-- **AI agents (anonymous)** — call `POST /v1/reports` with no authentication, file reports against any doc URL. No registration, no domain claim, no rate-limit beyond IP token bucket.
+- **Documentation maintainers** — sign up to the Hub, install the GitHub App on a repo, verify ownership of their docs domain (a DNS-TXT challenge), and point the Hub at that repo. From then on, the Hub turns each report whose doc URL is on one of their verified domains into a GitHub Issue on that repo.
+- **AI agents (anonymous)** — call `POST /v1/reports` with no authentication, file reports against any doc URL. No registration, no rate-limit beyond IP token bucket. Domain ownership is the *maintainer's* concern, never the agent's: an agent claims nothing, and a report only routes if some maintainer has verified that doc URL's host.
 
 ### Value
 
@@ -30,13 +30,13 @@ V1 is intentionally narrow: no public dashboard, no public read API, no vendor d
   - **GitHub OAuth federation** — v0 nice-to-have (deferrable to v0.1).
 - GitHub App install flow (`/v1/integrations/github/install` + callback).
 - Per-maintainer integration config (`POST /v1/orgs/me/integrations/github`) — set target repo + Issue template.
-- Forwarder Lambda — async-invoked on accepted report; mints a GitHub App installation token; posts an Issue on the target repo. Idempotent on `report_id`.
+- Domain claim + DNS-TXT verification (`POST /v1/orgs/me/domains`, `POST /v1/orgs/me/domains/:domain/verify`) — a maintainer proves they own a docs domain. This is the routing key (see §5).
+- Forwarder Lambda — async-invoked on accepted report; resolves the report's `doc_url` host to the maintainer who verified that domain (or a parent of it); mints a GitHub App installation token; posts an Issue on their target repo. No verified domain → no Issue. Idempotent on `report_id`.
 
 ### Out (V2+)
 
 - Public read API for reports (reports live as GitHub Issues, viewed in the GitHub UI).
 - Hosted MCP endpoint — the MCP server is a client-side npm package shipped by P0-10.
-- Domain claim / DNS TXT verification.
 - Public vendor directory.
 - Org dashboard with reply / status transitions.
 - Team invitations, RBAC.
@@ -60,6 +60,9 @@ CloudFront + S3 SPA → API Gateway HTTP API → Lambda (Node.js 20 / TypeScript
 Agent  ────► hub.fixyourdocs.io ──► API Gateway ──► POST /v1/reports Lambda ──► DynamoDB (Reports)
                                                                         │
                                                                         └─async─► Forwarder Lambda ──► GitHub Issues API
+                                                                                   │  resolve doc_url host →
+                                                                                   └► DynamoDB (Domains → Integrations)
+                                                                                      verified owner's repo, else no-op
 
 Maintainer ──► fixyourdocs.io ──► CloudFront ──► S3 (SPA)
                                                     │
@@ -86,10 +89,11 @@ Self-hosted deployments derive these hostnames from `FYD_ROOT_DOMAIN` (see [READ
 |---|---|---|
 | Report sink | GitHub Issues via GitHub App installation token, posted by an async-invoked forwarder Lambda | Maintainers already triage in GitHub; no new UI to build at v0 |
 | Agent auth on `POST /v1/reports` | None — rate-limited only | Lowest friction; reports are public-by-design (they become GitHub Issues) |
+| Report routing | The report's `doc_url` host is matched against domains maintainers have **DNS-TXT-verified**; the most-specific verified owner's `configured` repo wins. No verified match → no Issue | `doc_url` already carries the host (no protocol change needed); DNS-TXT proves ownership, so nobody can route reports into a repo they don't control |
 | Frontend stack | Vite + React SPA, S3 + CloudFront via CDK | Fully CDK-managed, no Amplify lock-in |
 | Human auth | Cognito user pool, in-app SRP via `amazon-cognito-identity-js`. Two sign-in paths into the same user pool: email + password (v0 must-have) and GitHub OAuth federation (v0 nice-to-have) | Native AWS, low ops; SRP keeps passwords client-side. GitHub OAuth gives maintainers who already use GitHub a one-click path without granting any third-party app extra access |
 | GitHub integration vs GitHub OAuth | Separate flows. Every maintainer (email-signup or GitHub-OAuth-signup) completes the GitHub App install once. The GitHub App + the GitHub OAuth login app can be the same registered app | `installations:write` and `read:user` are independent scopes; reusing one app simplifies setup |
-| DB | DynamoDB on-demand, multi-table (`Reports`, `Integrations`, `RateLimit`) | Safest at low volume, simple to evolve |
+| DB | DynamoDB on-demand, multi-table (`Reports`, `Integrations`, `Domains`, `RateLimit`) | Safest at low volume, simple to evolve |
 | Dedup | `dedup_key = sha256(doc_url + summary + agent + day_bucket)` GSI on `Reports`; conditional write returns existing id | Avoids duplicate Issues from agents retrying |
 | Rate limiting | Handler-level via `RateLimit` DynamoDB table (per-IP token bucket) + Lambda reserved concurrency cap on `/v1/reports*` | WAFv2 does not support API Gateway HTTP APIs (v2). WAF still applied to CloudFront |
 | IaC | AWS CDK v2 (TypeScript) | One language across infra + backend |
@@ -121,9 +125,9 @@ stable.
 
 ## 7. Success criteria for V1
 
-1. A new maintainer can sign up via email + password (or GitHub OAuth), install the GitHub App on a repo they own, point the Hub at that repo, and choose an Issue template — all from `fixyourdocs.io`.
+1. A new maintainer can sign up via email + password (or GitHub OAuth), install the GitHub App on a repo they own, verify ownership of their docs domain (DNS-TXT), point the Hub at that repo, and choose an Issue template — all from `fixyourdocs.io`.
 2. An MCP client (Claude Desktop, Cursor, the [TypeScript](https://github.com/fixyourdocs/sdk-typescript) or [Python](https://github.com/fixyourdocs/sdk-python) SDK) that POSTs a v0 report to `https://hub.fixyourdocs.io/v1/reports` gets back a `201 { id }`.
-3. Within 10 seconds, the same report appears as a new Issue on the maintainer's target repo, with the body rendered from the Issue template.
+3. Within 10 seconds, a report whose `doc_url` is on the maintainer's verified domain appears as a new Issue on their target repo, with the body rendered from the Issue template; a report on an unverified host produces no Issue.
 4. Posting the same report twice returns the same id and creates exactly one Issue (dedup).
 5. The whole stack deploys clean from a fresh `cdk deploy --all` on an empty AWS account, given only the env vars listed in [README.md](README.md#self-hosting).
 6. CI builds + typechecks on every push to `main`.

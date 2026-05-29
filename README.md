@@ -7,7 +7,7 @@ See LICENSE for the full text and https://fsl.software for background.
 
 > A structured feedback channel between the AI agents that read your documentation and the humans who maintain it.
 
-AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, today the signal is dropped: the user gets a worse answer and you never hear about it. **FixYourDocs** gives those agents a place to put the signal — a public MCP endpoint where they file structured reports against a verified docs domain — and gives docs owners a dashboard to triage, reply, and close.
+AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, today the signal is dropped: the user gets a worse answer and you never hear about it. **FixYourDocs** gives those agents a place to put the signal: they file a structured report through an open protocol, and the hub routes it — by the report's doc-URL host — to the repo of the maintainer who has verified (DNS-TXT) that they own that domain, opening a GitHub Issue so maintainers triage it with the tools they already use.
 
 This repository contains the **reference implementation** of the hosted product running at [fixyourdocs.io](https://fixyourdocs.io) — SPA, REST API, and the MCP client package — alongside the [docsfeedback.org](https://docsfeedback.org) Starlight site that hosts the open spec. The production CDK pipeline lives in a separate private infrastructure repository. The wire protocol it implements is specified in the open at [docsfeedback.org](https://docsfeedback.org).
 
@@ -28,7 +28,7 @@ If you want to **understand the protocol**, start at [fixyourdocs/protocol](http
 
 - [frontend/](frontend/) — Vite + React + Tailwind v4 SPA: landing page, sign-up / sign-in, GitHub App install + target-repo setup.
 - [backend/](backend/) — REST API Lambdas (Node.js 20 / TypeScript). Public rate-limited `/v1/reports*` plus Cognito-protected `/v1/orgs/*` and `/v1/integrations/*`; an async-invoked forwarder Lambda turns each accepted report into a GitHub Issue.
-- [mcp-server/](mcp-server/) — Client-side helper package (`@fyd/mcp`) exposing a `file_doc_feedback` tool. Calls `POST https://hub.fixyourdocs.io/v1/reports` to file a v0 report; the hub forwards it to a GitHub Issue on the maintainer's chosen repo.
+- [mcp-server/](mcp-server/) — Client-side npm package (`@fixyourdocs/mcp-server`, run via `npx -y @fixyourdocs/mcp-server` over stdio) exposing a single `file_doc_feedback` tool. Calls `POST https://hub.fixyourdocs.io/v1/reports` to file a v0 report; the hub routes it to a GitHub Issue on the repo of the maintainer who has verified ownership of the doc's domain.
 - [docsfeedback-site/](docsfeedback-site/) — Starlight site for [docsfeedback.org](https://docsfeedback.org). Spec markdown and JSON schemas are synced from the [protocol repo](https://github.com/fixyourdocs/protocol) at build time.
 - [e2e/](e2e/) — Playwright forwarder smoke test.
 - [SPEC.md](SPEC.md) — V1 product specification for this implementation. (For the **protocol** spec, see the [protocol repo](https://github.com/fixyourdocs/protocol).)
@@ -45,7 +45,7 @@ pnpm --filter @fyd/docsfeedback-site dev      # docs site on http://localhost:43
 pnpm --filter @fyd/e2e test                   # Playwright suite
 ```
 
-The frontend points at whatever `API_BASE_URL` / `MCP_BASE_URL` you configure at runtime via `frontend/public/env.js` (not committed — generate it at deploy time from your stack outputs).
+The frontend points at whatever `API_BASE_URL` you configure at runtime via `frontend/public/env.js` (not committed — generate it at deploy time from your stack outputs).
 
 ## Self-hosting
 
@@ -57,7 +57,7 @@ Self-hosters writing their own CDK app today can match the contract by passing t
 |---|---|---|
 | `CDK_DEFAULT_ACCOUNT` (or `FYD_AWS_ACCOUNT`) | yes | Target AWS account ID. |
 | `CDK_DEFAULT_REGION` (or `FYD_AWS_REGION`) | no | Defaults to `us-east-1`. Don't change unless you understand the CloudFront cert constraint. |
-| `FYD_ROOT_DOMAIN` | no | Defaults to `fixyourdocs.io`. The SPA, API, MCP, and Cognito callback URLs derive from it. |
+| `FYD_ROOT_DOMAIN` | no | Defaults to `fixyourdocs.io`. The SPA, API, and Cognito callback URLs derive from it. |
 | `FYD_HOSTED_ZONE_ID` | yes | Route 53 hosted zone ID for `FYD_ROOT_DOMAIN`. |
 | `FYD_OPS_ALERT_EMAIL` | yes | Subscribed to CloudWatch alarms + billing budget. |
 | `FYD_GITHUB_REPO` | no | `org/repo` allowed to assume the OIDC deploy role. |

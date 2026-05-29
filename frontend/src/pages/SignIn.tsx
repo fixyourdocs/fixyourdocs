@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Input, Label } from '../components/Input';
 import { Card, CardBody, CardHeader } from '../components/Card';
+import { GithubSignInButton } from '../components/GithubSignInButton';
 import { AuthError, signIn } from '../lib/auth';
 
 export function SignIn() {
@@ -49,6 +50,7 @@ export function SignIn() {
             {error && <p className="text-sm text-red-600">{error}</p>}
             <Button type="submit" disabled={busy} className="w-full">{busy ? 'Signing in...' : 'Sign in'}</Button>
           </form>
+          <GithubSignInButton label="Sign in with GitHub" />
         </CardBody>
       </Card>
       <p className="mt-4 text-center text-sm text-slate-600">

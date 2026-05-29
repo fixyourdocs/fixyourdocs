@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Card, CardBody } from '../components/Card';
-import { StatusPill } from '../components/StatusPill';
 import {
   CheckCircle2,
   FileText,
   Send,
-  Globe,
   Github,
   Play,
   BookOpen,
@@ -17,10 +15,8 @@ import {
 const MCP_CONFIG = `{
   "mcpServers": {
     "fixyourdocs": {
-      "transport": {
-        "type": "http",
-        "url": "https://mcp.fixyourdocs.io/mcp"
-      }
+      "command": "npx",
+      "args": ["-y", "@fixyourdocs/mcp-server"]
     }
   }
 }`;
@@ -125,7 +121,7 @@ function Spec() {
             </a>
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Wire-format example (v0)
           </p>
@@ -225,19 +221,19 @@ function WhyNow() {
 function HowItWorks() {
   const steps = [
     {
-      icon: <Globe size={20} />,
-      t: 'Claim your docs domain',
-      d: 'Add a DNS TXT record on your docs subdomain (e.g. docs.acme.com). Cryptographically tied to your account.',
+      icon: <Github size={20} />,
+      t: 'Connect your docs repo',
+      d: 'Sign up, install the FixYourDocs GitHub App, verify your docs domain (a DNS-TXT record), and pick the repo where reports should land.',
     },
     {
       icon: <Send size={20} />,
       t: 'Agents file structured reports',
-      d: 'Any MCP-aware agent can call file_report against your verified domain — no API keys, rate-limited at source.',
+      d: 'Any MCP-aware agent can call file_doc_feedback when it hits a broken doc — no API keys, rate-limited at source.',
     },
     {
       icon: <CheckCircle2 size={20} />,
-      t: 'Reply and close — publicly',
-      d: 'Triage in your dashboard. Public replies show that your docs are responsive. Open reports are visible to everyone.',
+      t: 'Reports land as GitHub Issues',
+      d: "Each report whose doc URL is on a domain you've verified is forwarded to a GitHub Issue on your connected repo, so you triage it with the tools you already use.",
     },
   ];
   return (
@@ -268,18 +264,19 @@ function ForAgents() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">For AI agents</h2>
           <p className="mt-3 text-sm leading-relaxed text-slate-600">
-            Add FixYourDocs to your MCP client. Two tools: <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">list_reports</code> and{' '}
-            <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">file_report</code>. No authentication needed —
-            anonymous submission, rate-limited per IP per domain.
+            Add the FixYourDocs MCP server to your client. It runs locally over stdio via{' '}
+            <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">npx</code> and exposes one tool:{' '}
+            <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">file_doc_feedback</code>. No authentication needed —
+            anonymous submission, rate-limited at the hub.
           </p>
           <p className="mt-3 text-sm text-slate-600">
-            Endpoint:{' '}
+            Install:{' '}
             <code className="block break-all rounded bg-white p-2 font-mono text-xs ring-1 ring-slate-200">
-              https://mcp.fixyourdocs.io/mcp
+              npx -y @fixyourdocs/mcp-server
             </code>
           </p>
         </div>
-        <div>
+        <div className="min-w-0">
           <pre className="overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 ring-1 ring-slate-700">
             <code>{MCP_CONFIG}</code>
           </pre>
@@ -304,7 +301,6 @@ function SampleReport() {
                 <p className="text-sm font-semibold text-slate-900">Step 4 mentions a "Save and Apply" button that no longer exists</p>
                 <p className="mt-1 truncate text-xs text-slate-500">https://docs.acme.com/sso/setup</p>
                 <div className="mt-2 flex items-center gap-2">
-                  <StatusPill status="open" />
                   <span className="text-xs text-slate-500">outdated</span>
                   <span className="text-xs text-slate-500">3h ago</span>
                 </div>

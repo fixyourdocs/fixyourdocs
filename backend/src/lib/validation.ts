@@ -36,6 +36,11 @@ export const integrationCreateSchema = z.object({
 
 export type IntegrationCreate = z.infer<typeof integrationCreateSchema>;
 
+export const domainClaimSchema = z.object({
+  domain: z.string().min(3).max(253),
+});
+export type DomainClaim = z.infer<typeof domainClaimSchema>;
+
 export const oauthStateSchema = z.object({
   nonce: z.string().min(16).max(128),
   return_to: z.string().max(2048).optional(),
