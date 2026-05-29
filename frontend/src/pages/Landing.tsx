@@ -69,8 +69,14 @@ function Hero() {
           <Link to="/signup">
             <Button>Connect your docs repo</Button>
           </Link>
-          <a href="https://docsfeedback.org" target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary">Read the protocol</Button>
+          <a href="https://docs.fixyourdocs.io/getting-started/" target="_blank" rel="noopener noreferrer">
+            <Button variant="secondary">Get started</Button>
+          </a>
+          <a href="https://docs.fixyourdocs.io/mcp/" target="_blank" rel="noopener noreferrer">
+            <Button variant="secondary">MCP server</Button>
+          </a>
+          <a href="https://docs.fixyourdocs.io/hub/" target="_blank" rel="noopener noreferrer">
+            <Button variant="secondary">Hub</Button>
           </a>
         </div>
       </div>
