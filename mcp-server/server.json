@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.fixyourdocs/mcp-server",
+  "title": "FixYourDocs",
+  "description": "File structured docs-feedback reports to the FixYourDocs hub via a file_doc_feedback tool.",
+  "websiteUrl": "https://fixyourdocs.io",
+  "repository": {
+    "url": "https://github.com/fixyourdocs/fixyourdocs",
+    "source": "github",
+    "subfolder": "mcp-server"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@fixyourdocs/mcp-server",
+      "version": "0.1.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "FIXYOURDOCS_HUB_URL",
+          "description": "Override the hub base URL. Defaults to https://hub.fixyourdocs.io.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "https://hub.fixyourdocs.io"
+        }
+      ]
+    }
+  ]
+}
