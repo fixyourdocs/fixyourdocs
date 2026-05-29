@@ -21,6 +21,10 @@ const MCP_CONFIG = `{
   }
 }`;
 
+const CODEX_CONFIG = `[mcp_servers.fixyourdocs]
+command = "npx"
+args = ["-y", "@fixyourdocs/mcp-server"]`;
+
 const SAMPLE_REPORT_JSON = `{
   "protocol_version": "0",
   "doc_url": "https://docs.example.com/sso/setup",
@@ -276,10 +280,23 @@ function ForAgents() {
             </code>
           </p>
         </div>
-        <div className="min-w-0">
-          <pre className="overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 ring-1 ring-slate-700">
-            <code>{MCP_CONFIG}</code>
-          </pre>
+        <div className="min-w-0 space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Claude Desktop &middot; Cursor
+            </p>
+            <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 ring-1 ring-slate-700">
+              <code>{MCP_CONFIG}</code>
+            </pre>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Codex &middot; <code className="normal-case">~/.codex/config.toml</code>
+            </p>
+            <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 ring-1 ring-slate-700">
+              <code>{CODEX_CONFIG}</code>
+            </pre>
+          </div>
         </div>
       </div>
     </section>
