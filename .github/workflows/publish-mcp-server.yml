@@ -1,0 +1,44 @@
+name: Publish mcp-server to npm
+
+on:
+  push:
+    tags:
+      - "mcp-server-v*.*.*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write          # required for OIDC trusted publishing
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          cache: pnpm
+
+      # OIDC trusted publishing requires npm >= 11.5.1; Node 22 still ships
+      # npm 10.x, under which the registry PUT 404s *after* a successful
+      # provenance sign. Upgrade first.
+      - run: npm install -g npm@latest
+
+      - run: pnpm install --frozen-lockfile
+
+      # Fail the release if the git tag and package.json version disagree.
+      - name: Verify tag matches package.json version
+        working-directory: mcp-server
+        run: |
+          PKG="$(node -p "require('./package.json').version")"
+          TAG="${GITHUB_REF_NAME#mcp-server-v}"
+          test "$PKG" = "$TAG" || { echo "::error::tag $GITHUB_REF_NAME ($TAG) != package.json ($PKG)"; exit 1; }
+
+      - run: pnpm --filter @fixyourdocs/mcp-server build
+      - run: pnpm --filter @fixyourdocs/mcp-server test
+
+      - name: Publish
+        working-directory: mcp-server
+        run: npm publish --provenance --access public
