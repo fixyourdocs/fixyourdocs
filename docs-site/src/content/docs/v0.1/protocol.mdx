@@ -1,0 +1,82 @@
+---
+banner:
+  content: |
+    📌 Pinned snapshot of <strong>docs v0.1</strong> (frozen at the <code>docs-v0.1</code> release). The latest docs live at the same page under <code>/v0/</code>.
+slug: "v0.1/protocol"
+title: Protocol primer
+description: What the Docs Feedback Protocol is, why it exists, and the shape of a report — in under 500 words. The formal spec lives at docsfeedback.org.
+---
+
+import { Aside, LinkCard } from '@astrojs/starlight/components';
+
+The **Docs Feedback Protocol** is an open, minimal standard for one narrow
+exchange: an AI agent (or a human) submits a structured report about a
+documentation page. Everything in FixYourDocs — the SDKs, the CLI, the MCP
+server, the Hub — is an implementation of this one protocol.
+
+## Why it exists
+
+When an agent consults docs that are wrong, stale, or incomplete, the
+failure is silent: it retries, guesses, or fabricates, and the maintainer
+never learns the docs are broken. The protocol standardises the report so
+that signal reaches the people who can fix the page — without changing the
+agent and without any shared account between the agent and the maintainer.
+
+## The wire format
+
+A v0 report is a small JSON object. Four fields carry the essentials:
+
+| Field | Required | What it is |
+|---|---|---|
+| `protocol_version` | yes | Always `"0"` for v0. |
+| `doc_url` | yes | The URL (or path) of the doc the reporter was reading. |
+| `agent` | yes | Who is reporting: `{ "name": "claude-code", ... }`. |
+| `report` | yes | The problem: `{ "kind", "summary", "details"? }`. |
+
+`report.kind` is one of `broken`, `incorrect`, `outdated`, `missing`,
+`unclear`, `other`. A minimal report:
+
+```json
+{
+  "protocol_version": "0",
+  "doc_url": "https://docs.example.com/getting-started",
+  "agent":   { "name": "claude-code" },
+  "report":  {
+    "kind":    "missing",
+    "summary": "The page does not document how to set the API_KEY env var."
+  }
+}
+```
+
+The transport is one endpoint: `POST /v1/reports` over HTTPS. Optional
+fields (`task_context`, `evidence`, `suggested_fix`, agent version/vendor)
+add context; the SDKs and the [spec](https://docsfeedback.org/spec/v0/)
+cover them in full.
+
+## Discovery and opt-in
+
+A docs-publishing organisation advertises whether it accepts reports — and
+where to send them — with a discovery document at
+`/.well-known/docs-feedback.json`. `opt_in: false` is an explicit opt-out
+that clients must honour. This very site ships one; see it at
+[`/.well-known/docs-feedback.json`](/.well-known/docs-feedback.json).
+
+<Aside type="note">
+The protocol does not say *how* a report reaches a maintainer — that's up to
+the receiving endpoint. The [FixYourDocs Hub](/v0.1/hub/) is one endpoint: it
+forwards reports to GitHub Issues for maintainers who have connected a repo
+and verified their domain.
+</Aside>
+
+## The formal spec
+
+This page is the orientation. The normative wire format, idempotency
+semantics, HTTP status codes, and JSON Schemas are the canonical spec at
+**docsfeedback.org** — the home of the protocol itself (distinct from this
+product site).
+
+<LinkCard
+  title="Docs Feedback Protocol — v0 spec"
+  description="The normative spec, examples, and JSON Schemas."
+  href="https://docsfeedback.org/spec/v0/"
+/>

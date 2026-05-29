@@ -1,0 +1,112 @@
+---
+banner:
+  content: |
+    📌 Pinned snapshot of <strong>docs v0.1</strong> (frozen at the <code>docs-v0.1</code> release). The latest docs live at the same page under <code>/v0/</code>.
+slug: "v0.1/sdk/python"
+title: Python SDK
+description: Install the fixyourdocs Python package, build a report, and send it to the Hub — sync or async.
+---
+
+import { Aside, LinkCard, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The reference Python SDK for the [Docs Feedback Protocol](/v0.1/protocol/).
+Package name: **`fixyourdocs`**. Requires Python 3.9+.
+
+## Install
+
+```sh
+pip install fixyourdocs
+```
+
+## Send a report
+
+The wire format is a nested object, so the SDK gives you an ergonomic flat
+constructor (`Report.create`) and a typed nested form. Both produce
+identical wire output.
+
+<Tabs>
+
+<TabItem label="Sync">
+
+```python
+from fixyourdocs import Client, Report
+
+report = Report.create(
+    doc_url="https://docs.example.com/getting-started",
+    summary="The page does not document how to set the API_KEY env var.",
+    kind="missing",
+    agent_name="claude-code",
+)
+
+with Client(api_url="https://hub.fixyourdocs.io") as client:
+    result = client.send(report)
+
+print(result.id, result.is_duplicate)
+```
+
+</TabItem>
+
+<TabItem label="Async">
+
+```python
+import asyncio
+from fixyourdocs import AsyncClient, Report
+
+async def main() -> None:
+    report = Report.create(
+        doc_url="https://docs.example.com/getting-started",
+        summary="The page does not document how to set the API_KEY env var.",
+        kind="missing",
+        agent_name="claude-code",
+    )
+    async with AsyncClient(api_url="https://hub.fixyourdocs.io") as client:
+        result = await client.send(report)
+    print(result.id, result.is_duplicate)
+
+asyncio.run(main())
+```
+
+</TabItem>
+
+</Tabs>
+
+## Building a report
+
+The four required pieces of every report map to `Report.create` keywords:
+
+- `doc_url` — the page you were reading.
+- `summary` — a one-line description of the problem.
+- `kind` — one of `broken`, `incorrect`, `outdated`, `missing`, `unclear`,
+  `other`.
+- `agent_name` — who is reporting.
+
+For programmatic construction from already-typed sub-objects, use the
+nested form `Report(agent=AgentInfo(...), report=ReportBody(...), ...)`.
+
+## Errors
+
+Non-2xx responses raise typed exceptions, all inheriting from
+`FixYourDocsError`:
+
+| Status | Exception |
+|---|---|
+| 400 | `ValidationError` (`.details`) |
+| 401 | `AuthError` |
+| 404 | `NotFoundError` |
+| 410 | `OptedOutError` (`.since`) |
+| 413 | `PayloadTooLargeError` (`.max_bytes`) |
+| 415 | `UnsupportedMediaTypeError` |
+| 422 | `PolicyRejectedError` (`.reason`) |
+| 429 | `RateLimitedError` (`.retry_after`) |
+| 5xx | `ServerError` (after one automatic retry on 502/503/504) |
+
+<Aside type="tip">
+The package also ships the `fixyourdocs` CLI (`pipx run fixyourdocs init`,
+`fixyourdocs report`). See the [CLI guide](/v0.1/cli/).
+</Aside>
+
+<LinkCard
+  title="Full API reference"
+  description="The sdk-python README covers every option, the CLI flags, and the typed error surface."
+  href="https://github.com/fixyourdocs/sdk-python"
+/>
