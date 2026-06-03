@@ -24,7 +24,6 @@ V1 is intentionally narrow: no public dashboard, no public read API, no vendor d
 ### In
 
 - `POST /v1/reports` — accept a v0 report (unauthenticated, rate-limited).
-- `GET /v1/reports/:id` — fetch by id.
 - Cognito user sign-up / sign-in for maintainers (SRP-based, in-app, no Hosted UI):
   - **Email + password** — v0 must-have.
   - **GitHub OAuth federation** — v0 nice-to-have (deferrable to v0.1).

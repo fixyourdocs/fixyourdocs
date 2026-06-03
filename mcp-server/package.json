@@ -1,6 +1,6 @@
 {
   "name": "@fixyourdocs/mcp-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "mcpName": "io.fixyourdocs/mcp-server",
   "description": "Model Context Protocol server for the Docs Feedback Protocol — exposes a single `file_doc_feedback` tool that any MCP client (Claude Desktop, Cursor, Codex, Gemini CLI) can call to file a structured docs-feedback report to https://hub.fixyourdocs.io",
   "keywords": [

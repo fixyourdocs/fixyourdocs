@@ -15,7 +15,7 @@ import {
 } from "./tool.js";
 
 export const SERVER_NAME = "fixyourdocs-mcp-server";
-export const SERVER_VERSION = "0.1.0";
+export const SERVER_VERSION = "0.1.1";
 
 export interface CreateServerOptions {
   /** Hub base URL. Defaults to https://hub.fixyourdocs.io. */
@@ -47,7 +47,7 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
         });
         // Both `content` (text) and `structuredContent` (machine-readable):
         // clients that only render text still see the JSON, clients that
-        // support structured content can read `{ id, url }` directly.
+        // support structured content can read `{ id }` directly.
         return {
           content: [
             {
