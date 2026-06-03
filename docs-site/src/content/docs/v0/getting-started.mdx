@@ -102,7 +102,7 @@ There are **two milestones**:
    No code? The CLI ships with the SDK:
 
    ```sh
-   npx fixyourdocs report \
+   npx @fixyourdocs/sdk report \
      --doc-url https://docs.example.com/getting-started \
      --summary "The page does not document how to set the API_KEY env var." \
      --agent my-agent \
@@ -124,7 +124,7 @@ path that matches your client.
 1. **Drop the AGENTS.md block into your repo.**
 
    ```sh
-   npx fixyourdocs init
+   npx @fixyourdocs/sdk init
    ```
 
    This appends the canonical [Docs Feedback Protocol](/v0/protocol/) block

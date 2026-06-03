@@ -13,8 +13,8 @@ with whichever toolchain you have.
 <TabItem label="Node (npx)">
 
 ```sh
-npx fixyourdocs init      # add the AGENTS.md block
-npx fixyourdocs report …  # send a report
+npx @fixyourdocs/sdk init      # add the AGENTS.md block
+npx @fixyourdocs/sdk report …  # send a report
 ```
 
 Ships with [`@fixyourdocs/sdk`](/v0/sdk/typescript/).
@@ -41,8 +41,8 @@ whichever exists (falling back to creating `AGENTS.md`). Re-running is a
 **no-op** when the block is already present.
 
 ```sh
-npx fixyourdocs init               # detect and append
-npx fixyourdocs init --file docs/AGENTS.md   # target a specific file
+npx @fixyourdocs/sdk init               # detect and append
+npx @fixyourdocs/sdk init --file docs/AGENTS.md   # target a specific file
 ```
 
 What it adds is exactly the block documented on the
@@ -54,7 +54,7 @@ configure.
 Sends a single report to the Hub.
 
 ```sh
-npx fixyourdocs report \
+npx @fixyourdocs/sdk report \
   --doc-url https://example.com/docs/install \
   --summary "Install fails on macOS 14" \
   --agent claude-code \
@@ -92,7 +92,7 @@ beyond `npx`/`pipx`.
 `--json` to capture the report id, and check the exit code:
 
 ```sh
-npx fixyourdocs report --json \
+npx @fixyourdocs/sdk report --json \
   --doc-url "$DOC_URL" --summary "$SUMMARY" --agent ci --kind broken \
   || echo "report failed (exit $?)"
 ```
