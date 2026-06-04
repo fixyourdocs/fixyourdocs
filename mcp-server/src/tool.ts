@@ -80,7 +80,6 @@ export type FileDocFeedbackInput = z.infer<typeof inputSchema>;
 
 export interface FileDocFeedbackResult {
   id: string;
-  url: string;
 }
 
 export interface FileDocFeedbackOptions {
@@ -99,8 +98,10 @@ function normalizeHubUrl(hubUrl: string | undefined): string {
 /**
  * Pure tool handler — building the v0 wire-format `Report` via the SDK's
  * `buildReport` helper, sending it through `Client.send`, and returning a
- * stable `{ id, url }` shape regardless of whether the hub treats it as
- * new (201) or a deduplicated submission (200).
+ * stable `{ id }` shape regardless of whether the hub treats it as
+ * new (201) or a deduplicated submission (200). The report is write-only
+ * on the public API (no retrieval endpoint), so `id` is an idempotency
+ * confirmation, not a fetchable handle.
  */
 export async function handleFileDocFeedback(
   input: FileDocFeedbackInput,
@@ -126,13 +127,12 @@ export async function handleFileDocFeedback(
   const client = new Client({
     apiUrl: hubUrl,
     fetch: options.fetch,
-    userAgent: "fixyourdocs-mcp-server/0.1.0",
+    userAgent: "fixyourdocs-mcp-server/0.1.1",
   });
   const result = await client.send(report);
 
   return {
     id: result.id,
-    url: `${hubUrl}/v1/reports/${result.id}`,
   };
 }
 

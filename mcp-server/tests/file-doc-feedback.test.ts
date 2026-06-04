@@ -24,7 +24,7 @@ function v0Response(id: string): Response {
 }
 
 describe("handleFileDocFeedback", () => {
-  it("posts to {hubUrl}/v1/reports and returns { id, url }", async () => {
+  it("posts to {hubUrl}/v1/reports and returns { id }", async () => {
     const fakeFetch = vi.fn<typeof fetch>().mockResolvedValue(
       v0Response("01ABCDEF0123456789ABCDEFGH"),
     );
@@ -36,7 +36,6 @@ describe("handleFileDocFeedback", () => {
 
     expect(result).toEqual({
       id: "01ABCDEF0123456789ABCDEFGH",
-      url: "https://hub.example.com/v1/reports/01ABCDEF0123456789ABCDEFGH",
     });
 
     expect(fakeFetch).toHaveBeenCalledOnce();
@@ -55,9 +54,7 @@ describe("handleFileDocFeedback", () => {
     );
 
     const result = await handleFileDocFeedback(validInput, { fetch: fakeFetch });
-    expect(result.url).toBe(
-      "https://hub.fixyourdocs.io/v1/reports/01TESTDEFAULTHUBURL00000000",
-    );
+    expect(result.id).toBe("01TESTDEFAULTHUBURL00000000");
     expect(fakeFetch.mock.calls[0]?.[0]).toBe(
       "https://hub.fixyourdocs.io/v1/reports",
     );

@@ -86,7 +86,7 @@ npx @modelcontextprotocol/inspector npx -y @fixyourdocs/mcp-server
 ```
 
 The inspector UI lists `file_doc_feedback`, accepts a fixture report,
-and shows the `{ id, url }` returned by the hub.
+and shows the `{ id }` returned by the hub.
 
 ## Tool: `file_doc_feedback`
 
@@ -110,13 +110,14 @@ Mirrors the v0 spec's
 
 ```jsonc
 {
-  "id": "01ABCDEF0123456789ABCDEFGH",
-  "url": "https://hub.fixyourdocs.io/v1/reports/01ABCDEF0123456789ABCDEFGH"
+  "id": "01ABCDEF0123456789ABCDEFGH"
 }
 ```
 
-`id` is a ULID returned by the hub. `url` is the canonical retrieval
-URL for the report.
+`id` is a ULID returned by the hub — an idempotency confirmation, not a
+fetchable handle. Reports are write-only on the public API: there is no
+retrieval endpoint, and report contents reach the doc owner only via the
+hub's GitHub-issue forwarding.
 
 ### Behaviour
 
@@ -125,7 +126,7 @@ URL for the report.
   the hub. Validation errors are returned as MCP `isError: true`
   results with a human-readable explanation.
 - On a `201 Created` (new submission) or `200 OK` (idempotent
-  duplicate), the tool returns `{ id, url }` regardless — agents
+  duplicate), the tool returns `{ id }` regardless — agents
   don't need to distinguish, the hub will not double-file the issue.
 - On `429 rate_limited`, `5xx`, or any network error, the tool
   surfaces the error verbatim. Clients should treat this as transient
