@@ -35,10 +35,23 @@ const SAMPLE_REPORT_JSON = `{
   }
 }`;
 
+const TRY_IT_CURL = `curl -X POST https://hub.fixyourdocs.io/v1/reports \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "protocol_version": "0",
+    "doc_url": "https://demo-libraryx.com/payments",
+    "agent": { "name": "claude-code" },
+    "report": {
+      "kind": "outdated",
+      "summary": "Payments guide still shows the v1 charge flow (change me to avoid dedup)"
+    }
+  }'`;
+
 export function Landing() {
   return (
     <>
       <Hero />
+      <TryIt />
       <Spec />
       <SDK />
       <WhyNow />
@@ -106,6 +119,50 @@ function DemoEmbed() {
         </div>
       </div>
     </div>
+  );
+}
+
+function TryIt() {
+  return (
+    <section className="bg-slate-50 py-16">
+      <div className="mx-auto max-w-5xl px-6">
+        <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
+          <Send size={22} className="text-sky-700" /> Try it in 30 seconds
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
+          Paste this into a terminal. It files a report against our live demo doc —
+          and because that demo's domain is verified, you'll watch it land as a
+          public GitHub Issue.
+        </p>
+        <pre className="mt-6 overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 ring-1 ring-slate-700">
+          <code>{TRY_IT_CURL}</code>
+        </pre>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600">
+          Heads up: this opens a <strong>public</strong> Issue on the demo repo —
+          it exists for exactly this, so go ahead. Change the{' '}
+          <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">summary</code> so
+          the Hub doesn't de-duplicate your report against an identical one.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <a
+            href="https://github.com/fyd-demo-maintainer/demo-libraryx/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex"
+          >
+            <Button>Watch it land →</Button>
+          </a>
+          <a
+            href="https://demo-libraryx.com/payments"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex"
+          >
+            <Button variant="secondary">See the demo doc</Button>
+          </a>
+        </div>
+      </div>
+    </section>
   );
 }
 

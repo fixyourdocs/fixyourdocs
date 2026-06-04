@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import starlightImageZoom from 'starlight-image-zoom';
 
 // Versioning model (P0-13): content-folder versioning, git-tag cut.
 // Source of truth for the current docs is `src/content/docs/v0/`, served
@@ -31,6 +32,8 @@ export default defineConfig({
   redirects,
   integrations: [
     starlight({
+      // Click any screenshot to open it full-size in a zoom overlay.
+      plugins: [starlightImageZoom()],
       title: 'FixYourDocs',
       description:
         'Documentation for the FixYourDocs product — the open protocol, the SDKs, the CLI, the Hub, and the MCP server.',
