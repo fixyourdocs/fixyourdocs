@@ -51,6 +51,7 @@ export function Landing() {
   return (
     <>
       <Hero />
+      <Demo />
       <TryIt />
       <Spec />
       <SDK />
@@ -93,14 +94,23 @@ function Hero() {
           </a>
         </div>
       </div>
-      <DemoEmbed />
+    </section>
+  );
+}
+
+function Demo() {
+  return (
+    <section className="border-y border-slate-200 bg-white py-16">
+      <div className="mx-auto max-w-5xl px-6">
+        <DemoEmbed />
+      </div>
     </section>
   );
 }
 
 function DemoEmbed() {
   return (
-    <div className="mt-12">
+    <div>
       <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
         <div className="aspect-video w-full">
           <div
@@ -131,8 +141,8 @@ function TryIt() {
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
           Paste this into a terminal. It files a report against our live demo doc —
-          and because that demo's domain is verified, you'll watch it land as a
-          public GitHub Issue.
+          and because that demo's domain is verified, a new public GitHub Issue
+          lands on the demo repo within ~30 seconds of submitting.
         </p>
         <pre className="mt-6 overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 ring-1 ring-slate-700">
           <code>{TRY_IT_CURL}</code>
@@ -158,7 +168,7 @@ function TryIt() {
             rel="noopener noreferrer"
             className="inline-flex"
           >
-            <Button variant="secondary">See the demo doc</Button>
+            <Button variant="secondary">See the stale demo doc</Button>
           </a>
         </div>
       </div>
