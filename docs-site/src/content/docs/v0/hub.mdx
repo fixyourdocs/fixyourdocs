@@ -52,74 +52,58 @@ isn't theirs. A report against an unverified domain is accepted (`201`) but
 
 ## Become a forwarding target
 
-The fastest path is the web UI: sign in at
-[fixyourdocs.io](https://fixyourdocs.io) and use the settings screen, which
-drives the API calls below for you. Here's what happens under the hood.
+Sign in at [fixyourdocs.io](https://fixyourdocs.io) and open the settings
+screen. The whole setup is point-and-click — each step below is a screenshot
+of exactly what you'll see. (Click any screenshot to enlarge it.)
 
 <Steps>
 
-1. **Sign in.** Authentication is via the Hub's identity provider (sign in
-   with GitHub at [fixyourdocs.io](https://fixyourdocs.io)). All
-   `/v1/orgs/me/*` calls below require the resulting bearer token.
+1. **Sign in.** Sign in with GitHub at
+   [fixyourdocs.io](https://fixyourdocs.io). The settings screen opens once
+   you're in.
 
-2. **Install the GitHub App.** The settings UI sends you to install the
-   FixYourDocs GitHub App on the repo that should receive Issues. Behind it:
+   ![Signing in to the Hub with GitHub](/v0/hub/1.png)
 
-   ```http
-   GET /v1/integrations/github/install
-   ```
+2. **Install the GitHub App.** From settings, start the install of the
+   FixYourDocs GitHub App. GitHub asks which repo should receive Issues —
+   pick it and grant access. You land back on the settings screen.
 
-   returns a one-time install URL; after you grant access, the callback
-   records your installation.
+   ![Starting the GitHub App install from the settings screen](/v0/hub/2a.png)
 
-3. **Point the integration at a repo.** Choose the target repo and the
-   Issue body template. The template may reference these placeholders
-   (single braces): `{summary}`, `{details}`, `{doc_url}`, `{agent_name}`,
-   `{report_kind}`.
+   ![Granting the App access to your repo on GitHub](/v0/hub/2b.png)
 
-   ```http
-   POST /v1/orgs/me/integrations/github
-   { "repo_owner": "your-org", "repo_name": "your-repo",
-     "issue_template": "Reported on {doc_url}\n\n{details}\n\n— {agent_name} ({report_kind})" }
-   ```
+3. **Point the integration at a repo.** Choose the target repo and write the
+   Issue body template. The template can reuse these fields (in single
+   braces): `{summary}`, `{details}`, `{doc_url}`, `{agent_name}`,
+   `{report_kind}`. Forwarded Issues are titled `[docs] <your summary>`, and
+   report text is sanitised before it's filled in (no live `@mentions` or
+   `#refs`).
 
-   The Hub confirms the App can write that repo before saving. Forwarded
-   Issues are titled `[docs] <your summary>`; report fields from the
-   anonymous endpoint are sanitised before substitution (no live
-   `@mentions` or `#refs`).
+   ![Choosing the target repo and Issue template in the settings screen](/v0/hub/3.png)
 
-4. **Claim the domain your docs live on.**
+4. **Claim the domain your docs live on.** Enter the domain your docs are
+   served from (for example `docs.your-org.com`). The settings screen then
+   shows you a DNS **TXT** challenge record to publish.
 
-   ```http
-   POST /v1/orgs/me/domains
-   { "domain": "docs.your-org.com" }
-   ```
+   ![Claiming a domain in the settings screen](/v0/hub/4.png)
 
-   The response includes the DNS challenge to publish:
+5. **Publish the TXT record** in your DNS, copying the name and value
+   exactly as the settings screen shows them.
 
-   ```json
-   {
-     "domain": "docs.your-org.com",
-     "status": "pending",
-     "dns_record": {
-       "name": "_fixyourdocs-challenge.docs.your-org.com",
-       "type": "TXT",
-       "value": "fyd-verify=<token>"
-     }
-   }
-   ```
+   ![Publishing the DNS TXT challenge record](/v0/hub/5.png)
 
-5. **Publish the TXT record** in your DNS, exactly as returned (name `=`
-   `_fixyourdocs-challenge.<your-domain>`, value `=` `fyd-verify=<token>`).
+6. **Verify.** Once DNS has propagated, click **Verify**. On a match the
+   domain flips to `verified`. (DNS can take a few minutes — if it isn't
+   visible yet you'll see a "still pending" hint; just try again shortly.)
 
-6. **Verify.** Once DNS has propagated:
+   ![The domain flipping to verified in the settings screen](/v0/hub/6.png)
 
-   ```http
-   POST /v1/orgs/me/domains/docs.your-org.com/verify
-   ```
+7. **Send a test report.** Confirm the whole path end-to-end with the **Send
+   a test report** button on the settings screen. Within a moment a matching
+   `[docs] smoke test — ignore` Issue appears in your configured repo — close
+   it and you're live.
 
-   On a match the domain flips to `verified`. (If the record isn't visible
-   yet you get `status: pending` with a hint — DNS can take a few minutes.)
+   ![The test report arriving as a GitHub Issue](/v0/hub/7.png)
 
 </Steps>
 
@@ -136,9 +120,9 @@ those.
 
 ## Checking your setup
 
-`GET /v1/orgs/me` returns a snapshot: your integration status (installed /
-configured, target repo) and your domains (with the DNS challenge for any
-still pending). The settings UI renders this for you.
+The settings screen always shows a snapshot of where you stand: your
+integration status (installed / configured, and the target repo) and your
+domains, with the DNS challenge still visible for any that are pending.
 
 <LinkCard
   title="See it end-to-end"
