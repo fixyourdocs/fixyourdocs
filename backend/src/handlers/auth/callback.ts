@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyHandlerV2,
@@ -80,13 +80,14 @@ async function resolveUser(email: string, githubId: string): Promise<LinkResult>
     // different account, reject — never split one GitHub identity across two.
     if (linkedUsername) return { reject: 'account_conflict' };
 
-    // Email is a sign-in *alias*, so the username must not be email-format —
-    // generate a UUID and let the email attribute carry the address.
-    const username = randomUUID();
-    await cognito.send(
+    // Pool is UsernameAttributes:['email'] — AdminCreateUser requires the email
+    // as Username; Cognito assigns the immutable UUID sub. Reuse that sub
+    // downstream (pin key + AdminInitiateAuth) so it matches event.userName in
+    // the CUSTOM_AUTH triggers.
+    const created = await cognito.send(
       new AdminCreateUserCommand({
         UserPoolId: userPoolId,
-        Username: username,
+        Username: email,
         MessageAction: 'SUPPRESS',
         UserAttributes: [
           { Name: 'email', Value: email },
@@ -95,6 +96,7 @@ async function resolveUser(email: string, githubId: string): Promise<LinkResult>
         ],
       }),
     );
+    const username = created.User!.Username!;
     // M4: leave FORCE_CHANGE_PASSWORD → CONFIRMED so CUSTOM_AUTH can proceed.
     await cognito.send(
       new AdminSetUserPasswordCommand({
