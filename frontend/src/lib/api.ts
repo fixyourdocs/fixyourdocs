@@ -25,3 +25,22 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
   }
   return data as T;
 }
+
+// P0-16 — the destructive half of the write API. Each is owner-scoped on the
+// backend (the JWT subject is the key/condition), so no id needs to be passed
+// beyond the domain.
+
+/** Hard-delete a claimed domain (pending or verified). */
+export const deleteDomain = (domain: string) =>
+  api(`/v1/orgs/me/domains/${encodeURIComponent(domain)}`, { method: 'DELETE' });
+
+/** Clear the target repo config but keep the GitHub App installed. */
+export const deleteRepoConfig = () =>
+  api<{ status: string }>('/v1/orgs/me/integrations/github/repo', { method: 'DELETE' });
+
+/** Disconnect GitHub: drop our integration row AND uninstall the App on GitHub. */
+export const deleteIntegration = () =>
+  api('/v1/orgs/me/integrations/github', { method: 'DELETE' });
+
+/** Right-to-erasure: cascade-delete domains, integration, GitHub link + Cognito user. */
+export const deleteAccount = () => api('/v1/orgs/me', { method: 'DELETE' });
