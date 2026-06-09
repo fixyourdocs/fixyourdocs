@@ -45,6 +45,25 @@ export async function installationToken(installationId: number, repoName: string
   return token;
 }
 
+// Uninstall the App from the account/org that installed it (P0-16). Authed with
+// a short-lived App JWT, same as getInstallationAccountLogin. Returns true when
+// GitHub removed it (204) or it was already gone (404); false on any other
+// non-2xx so the caller can log a warning but still drop our row — we never
+// strand a user's deletion because GitHub hiccuped.
+export async function deleteInstallation(installationId: number): Promise<boolean> {
+  const auth = await appAuth();
+  const { token } = await auth({ type: 'app' }); // short-lived App JWT
+  const res = await fetch(`${API}/app/installations/${installationId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'User-Agent': USER_AGENT,
+    },
+  });
+  return res.ok || res.status === 404;
+}
+
 export async function getInstallationAccountLogin(installationId: number): Promise<string | null> {
   const auth = await appAuth();
   const { token } = await auth({ type: 'app' }); // short-lived App JWT

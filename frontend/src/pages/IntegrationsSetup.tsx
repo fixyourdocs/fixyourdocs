@@ -1,10 +1,19 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../components/Button';
 import { Input, Textarea, Label } from '../components/Input';
 import { Card, CardBody, CardHeader } from '../components/Card';
 import { Spinner } from '../components/Spinner';
-import { ApiError, api } from '../lib/api';
+import {
+  ApiError,
+  api,
+  deleteAccount,
+  deleteDomain,
+  deleteIntegration,
+  deleteRepoConfig,
+} from '../lib/api';
+import { signOut } from '../lib/auth';
 import { env } from '../lib/env';
 
 const DEFAULT_TEMPLATE = `**Docs feedback from an AI agent**
@@ -145,9 +154,86 @@ export function IntegrationsSetup() {
             <code className="rounded bg-slate-100 px-1">{`POST ${env.HUB_BASE_URL}/v1/reports`}</code>. A report whose{' '}
             <code className="rounded bg-slate-100 px-1">doc_url</code> is on a verified domain lands as an Issue on your connected repo within seconds.
           </p>
+          <DangerZone email={me.data.email} />
         </>
       )}
     </main>
+  );
+}
+
+// "Delete account" is irreversible and cascades (domains + integration + GitHub
+// link + Cognito user), so gate it behind a typed confirmation. On success we
+// clear the local Cognito session and bounce to the landing page — the user no
+// longer exists, so any further authed call would 401 anyway.
+function DangerZone({ email }: { email?: string }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const expected = email ?? 'DELETE';
+
+  const del = useMutation({
+    mutationFn: () => deleteAccount(),
+    onSuccess: () => {
+      signOut(); // clears amazon-cognito-identity-js localStorage tokens
+      navigate('/', { replace: true });
+    },
+    onError: (err: ApiError) => setError(err.message),
+  });
+
+  return (
+    <Card className="border-red-200">
+      <CardHeader>
+        <h2 className="text-base font-semibold text-red-700">Danger zone</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Permanently delete your account. This removes your verified domains, your GitHub
+          integration (and uninstalls the FixYourDocs App), and your sign-in — and cannot be undone.
+        </p>
+      </CardHeader>
+      <CardBody className="space-y-4">
+        {!open ? (
+          <Button variant="danger" onClick={() => setOpen(true)}>
+            Delete account
+          </Button>
+        ) : (
+          <div className="space-y-3 rounded-md border border-red-200 bg-red-50 p-4">
+            <Label htmlFor="confirmDelete">
+              Type <code className="rounded bg-white px-1 text-xs">{expected}</code> to confirm
+            </Label>
+            <Input
+              id="confirmDelete"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder={expected}
+              autoComplete="off"
+            />
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="danger"
+                disabled={confirm !== expected || del.isPending}
+                onClick={() => {
+                  setError(null);
+                  del.mutate();
+                }}
+              >
+                {del.isPending ? 'Deleting…' : 'Permanently delete'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setOpen(false);
+                  setConfirm('');
+                  setError(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 
@@ -195,6 +281,24 @@ function GithubRepoSection({ integration }: { integration: Integration | null })
     },
     onError: (err: ApiError) =>
       setError(err.code === 'no_installation' ? 'Install the GitHub App first.' : err.message),
+  });
+
+  const removeRepo = useMutation({
+    mutationFn: () => deleteRepoConfig(),
+    onSuccess: () => {
+      setError(null);
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: (err: ApiError) => setError(err.message),
+  });
+
+  const disconnect = useMutation({
+    mutationFn: () => deleteIntegration(),
+    onSuccess: () => {
+      setError(null);
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: (err: ApiError) => setError(err.message),
   });
 
   function onSubmit(e: FormEvent) {
@@ -283,6 +387,34 @@ function GithubRepoSection({ integration }: { integration: Integration | null })
             {save.isSuccess && !save.isPending && <span className="text-xs text-green-700">Saved.</span>}
           </div>
         </form>
+
+        {installed && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+            {configured && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => removeRepo.mutate()}
+                disabled={removeRepo.isPending}
+              >
+                {removeRepo.isPending ? 'Removing…' : 'Remove repo'}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={() => disconnect.mutate()}
+              disabled={disconnect.isPending}
+            >
+              {disconnect.isPending ? 'Disconnecting…' : 'Disconnect GitHub'}
+            </Button>
+            <span className="text-xs text-slate-500">
+              Disconnect also uninstalls the FixYourDocs App from your GitHub account.
+            </span>
+          </div>
+        )}
       </CardBody>
     </Card>
   );
@@ -307,6 +439,12 @@ function DomainsSection({ domains }: { domains: DomainView[] }) {
     mutationFn: (d: string) =>
       api<{ status: string; hint?: string }>(`/v1/orgs/me/domains/${encodeURIComponent(d)}/verify`, { method: 'POST' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (d: string) => deleteDomain(d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+    onError: (err: ApiError) => setError(err.message),
   });
 
   function onClaim(e: FormEvent) {
@@ -344,6 +482,7 @@ function DomainsSection({ domains }: { domains: DomainView[] }) {
           <ul className="space-y-4">
             {domains.map((d) => {
               const verifying = verify.isPending && verify.variables === d.domain;
+              const removing = remove.isPending && remove.variables === d.domain;
               const hint = verify.variables === d.domain && verify.data?.status === 'pending' ? verify.data.hint : null;
               return (
                 <li key={d.domain} className="rounded-md border border-slate-200 p-3">
@@ -356,6 +495,16 @@ function DomainsSection({ domains }: { domains: DomainView[] }) {
                           {verifying ? 'Checking…' : 'Verify'}
                         </Button>
                       )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => remove.mutate(d.domain)}
+                        disabled={removing}
+                      >
+                        {removing ? 'Removing…' : 'Remove'}
+                      </Button>
                     </div>
                   </div>
                   {d.status === 'pending' && d.dns_record && (
