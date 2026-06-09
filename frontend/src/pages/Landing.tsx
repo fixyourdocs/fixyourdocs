@@ -51,7 +51,6 @@ export function Landing() {
   return (
     <>
       <Hero />
-      <Demo />
       <TryIt />
       <Spec />
       <SDK />
@@ -66,43 +65,29 @@ export function Landing() {
 
 function Hero() {
   return (
-    <section className="mx-auto max-w-5xl px-6 pb-12 pt-20 sm:pt-28">
-      <div className="max-w-3xl">
-        <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-sky-600" />
-          A feedback channel for the agents already reading your docs
-        </p>
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-slate-900 sm:text-6xl">
-          When agents hit broken docs, you hear about it.
-        </h1>
-        <p className="mt-6 text-lg leading-relaxed text-slate-600">
-          Open protocol, reference SDKs, and a hosted hub for turning every agent run on your docs
-          into a structured signal you can act on.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/signup">
-            <Button>Connect your docs repo</Button>
-          </Link>
-          <a href="https://docs.fixyourdocs.io/getting-started/" target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary">Get started</Button>
-          </a>
-          <a href="https://docs.fixyourdocs.io/mcp/" target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary">MCP server</Button>
-          </a>
-          <a href="https://docs.fixyourdocs.io/hub/" target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary">Hub</Button>
-          </a>
+    <section className="border-b border-slate-200 bg-white">
+      <div className="mx-auto max-w-5xl px-6 pb-16 pt-20 sm:pt-28">
+        <div className="max-w-3xl">
+          <h1 className="text-4xl font-semibold tracking-tight text-slate-900 sm:text-6xl">
+            When agents hit broken docs, you hear about it.
+          </h1>
+          <p className="mt-6 text-lg leading-relaxed text-slate-600">
+            An open protocol, reference SDKs, and a hosted hub. When an agent hits a broken or
+            outdated page, it files a structured report — and the hub opens a GitHub issue on
+            your docs repo.
+          </p>
         </div>
-      </div>
-    </section>
-  );
-}
-
-function Demo() {
-  return (
-    <section className="border-y border-slate-200 bg-white py-16">
-      <div className="mx-auto max-w-5xl px-6">
-        <DemoEmbed />
+        <div className="mt-10 max-w-3xl">
+          <DemoEmbed />
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link to="/signup" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto">Get started</Button>
+            </Link>
+            <a href="https://docs.fixyourdocs.io/getting-started/" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+              <Button variant="secondary" className="w-full sm:w-auto">Read the docs</Button>
+            </a>
+          </div>
+        </div>
       </div>
     </section>
   );
