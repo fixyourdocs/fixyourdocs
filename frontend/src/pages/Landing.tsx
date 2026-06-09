@@ -79,18 +79,18 @@ function Hero() {
           Open protocol, reference SDKs, and a hosted hub for turning every agent run on your docs
           into a structured signal you can act on.
         </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/signup">
-            <Button>Connect your docs repo</Button>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Link to="/signup" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">Connect your docs repo</Button>
           </Link>
-          <a href="https://docs.fixyourdocs.io/getting-started/" target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary">Get started</Button>
+          <a href="https://docs.fixyourdocs.io/getting-started/" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+            <Button variant="secondary" className="w-full sm:w-auto">Get started</Button>
           </a>
-          <a href="https://docs.fixyourdocs.io/mcp/" target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary">MCP server</Button>
+          <a href="https://docs.fixyourdocs.io/mcp/" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+            <Button variant="secondary" className="w-full sm:w-auto">MCP server</Button>
           </a>
-          <a href="https://docs.fixyourdocs.io/hub/" target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary">Hub</Button>
+          <a href="https://docs.fixyourdocs.io/hub/" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+            <Button variant="secondary" className="w-full sm:w-auto">Hub</Button>
           </a>
         </div>
       </div>
