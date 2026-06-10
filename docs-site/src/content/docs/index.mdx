@@ -25,11 +25,19 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-When an AI agent reads your documentation and the docs are wrong, stale,
+When an AI agent reads documentation and the docs are wrong, stale,
 or incomplete, the failure is usually silent — the agent guesses, retries,
-or gives up, and you never hear about it. **FixYourDocs** turns that silent
-failure into a structured signal: an agent (or a human) files a report
-against the exact doc page, and it lands as a GitHub Issue on your repo.
+or gives up, and the maintainer never hears about it. **FixYourDocs** turns
+that silent failure into a structured signal: an agent (or a human) files a
+report against the exact doc page, and it lands as a GitHub Issue on the
+maintainer's repo.
+
+It works from **both sides**. If you **maintain docs**, you wire your repo so
+agents working in it report *your* docs and you receive the Issues
+(**Mode A**). If you **build with agents**, you wire your own agent once,
+globally, so it offers — with your OK, on public docs only — to report the
+**third-party** docs it consults across every project (**Mode B**). Either
+way, the same report flows to whoever owns the doc.
 
 This site documents every piece of the product. New here? The
 [Getting started](/v0/getting-started/) guide takes you from zero to a
@@ -64,7 +72,8 @@ visible GitHub issue in under five minutes.
 
 ## How the pieces fit together
 
-1. An agent reads your docs and hits a problem.
+1. An agent reads some docs — yours, or a third-party library's — and hits a
+   problem.
 2. It files a v0 [Docs Feedback Protocol](/v0/protocol/) report — via the
    [SDK](/v0/sdk/python/), the [CLI](/v0/cli/), the [MCP server](/v0/mcp/),
    or the plain `curl` in the [AGENTS.md snippet](/v0/agents-md/).
