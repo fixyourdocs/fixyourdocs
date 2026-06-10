@@ -5,16 +5,17 @@ description: The fixyourdocs CLI — init to wire a repo, report to send a one-o
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-The `fixyourdocs` CLI covers the two one-liners every repo needs: drop the
-AGENTS.md block, and send a report. It ships with **both** SDKs, so run it
-with whichever toolchain you have.
+The `fixyourdocs` CLI covers the one-liners you need: wire an agent (a repo,
+or your global config) and send a report. It ships with **both** SDKs, so run
+it with whichever toolchain you have.
 
 <Tabs syncKey="runtime">
 <TabItem label="Node (npx)">
 
 ```sh
-npx @fixyourdocs/sdk init      # add the AGENTS.md block
-npx @fixyourdocs/sdk report …  # send a report
+npx @fixyourdocs/sdk init           # add the AGENTS.md block to this repo (Mode A)
+npx @fixyourdocs/sdk init --global  # wire your global agent config (Mode B)
+npx @fixyourdocs/sdk report …       # send a report
 ```
 
 Ships with [`@fixyourdocs/sdk`](/v0/sdk/typescript/).
@@ -23,8 +24,9 @@ Ships with [`@fixyourdocs/sdk`](/v0/sdk/typescript/).
 <TabItem label="Python (pipx)">
 
 ```sh
-pipx run fixyourdocs init      # add the AGENTS.md block
-pipx run fixyourdocs report …  # send a report
+pipx run fixyourdocs init           # add the AGENTS.md block to this repo (Mode A)
+pipx run fixyourdocs init --global  # wire your global agent config (Mode B)
+pipx run fixyourdocs report …       # send a report
 ```
 
 Ships with the [`fixyourdocs`](/v0/sdk/python/) Python package.
@@ -34,11 +36,17 @@ Ships with the [`fixyourdocs`](/v0/sdk/python/) Python package.
 
 ## `fixyourdocs init`
 
+`init` installs the Docs Feedback Protocol instructions for an agent. It has
+**two modes**, matching the two ways to adopt FixYourDocs.
+
+### Mode A — wire a repo (default)
+
 Adds the canonical [Docs Feedback Protocol](/v0/protocol/) block to your
-repo's agent-instructions file. It auto-detects `AGENTS.md`, `CLAUDE.md`,
-`.cursor/rules`, or `.github/copilot-instructions.md` and appends to
-whichever exists (falling back to creating `AGENTS.md`). Re-running is a
-**no-op** when the block is already present.
+repo's agent-instructions file, so agents working in *that repo* report
+*its* docs. It auto-detects `AGENTS.md`, `CLAUDE.md`, `.cursor/rules`, or
+`.github/copilot-instructions.md` and appends to whichever exists (falling
+back to creating `AGENTS.md`). Re-running is a **no-op** when the block is
+already present.
 
 ```sh
 npx @fixyourdocs/sdk init               # detect and append
@@ -48,6 +56,31 @@ npx @fixyourdocs/sdk init --file docs/AGENTS.md   # target a specific file
 What it adds is exactly the block documented on the
 [AGENTS.md snippet](/v0/agents-md/) page — there's no other state to
 configure.
+
+### Mode B — wire yourself globally (`--global`)
+
+Adds the **consumer-side** "report stale third-party docs" block to your
+*global* agent config instead, so your agent — in **every** project you work
+in — can offer to report the broken third-party docs it consults. Public
+docs only, and only with your OK.
+
+```sh
+npx @fixyourdocs/sdk init --global               # default ~/.claude/CLAUDE.md
+npx @fixyourdocs/sdk init --global --file ~/.codex/AGENTS.md   # another config
+```
+
+Defaults to `~/.claude/CLAUDE.md` (Claude Code's user memory); under
+`--global` a relative `--file` path resolves against `$HOME`. Idempotent,
+like Mode A. The block it writes — and the safety guards behind it — are
+covered under [Reporting third-party docs](/v0/mcp/#reporting-third-party-docs-consumer-side--mode-b);
+pairing it with the [MCP server](/v0/mcp/) is recommended, since the server
+enforces the consent and public-docs-only checks for you.
+
+| Flag | Meaning |
+|---|---|
+| `--global` | Write the consumer-side block to your global agent config (Mode B) instead of a repo. |
+| `--file <path>` | Target a specific file. Skips auto-detection; under `--global`, a relative path resolves against `$HOME`. |
+| `--json` | Machine-readable output. |
 
 ## `fixyourdocs report`
 
