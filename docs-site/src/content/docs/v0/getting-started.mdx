@@ -14,8 +14,8 @@ There are **two milestones**:
    GitHub Issue. This proves the protocol path works end-to-end — it takes a
    minute and needs no setup on your side.
 2. **Receive reports as GitHub Issues** on your own repo. This needs a
-   one-time Hub setup (connect the GitHub App, verify your domain). It's
-   covered at the end and links to the [Hub guide](/v0/hub/).
+   one-time Hub setup (connect the GitHub App, verify you own your docs).
+   It's covered at the end and links to the [Hub guide](/v0/hub/).
 
 <Aside type="caution" title="These examples file a real, public Issue">
 The examples below report against
@@ -219,16 +219,19 @@ The one-time setup, in three moves:
 1. **Sign in** at [fixyourdocs.io](https://fixyourdocs.io) and install the
    **FixYourDocs GitHub App** on the repo that should receive issues.
 
-2. **Verify the domain** your docs live on by adding a single DNS `TXT`
-   record the Hub gives you.
+2. **Verify you own your docs.** For a domain, add a single DNS `TXT` record
+   the Hub gives you. For docs on **GitHub Pages** (`<user>.github.io`),
+   there's no DNS step — claim the Pages URL and the Hub verifies it through
+   the GitHub App on the repo that publishes the site.
 
 3. **Point the integration** at your repo and an Issue body template.
 
 </Steps>
 
-The [Hub guide](/v0/hub/) walks through each call and the exact DNS record.
-Once it's done, the next report against a doc on your verified domain shows
-up at `https://github.com/<your-org>/<your-repo>/issues`.
+The [Hub guide](/v0/hub/) walks through each method — the exact DNS record for
+a domain, and the [GitHub Pages](/v0/hub/#docs-on-github-pages) claim. Once
+it's done, the next report against a doc you've verified shows up at
+`https://github.com/<your-org>/<your-repo>/issues`.
 
 <LinkCard
   title="Connect the Hub to your repo"
