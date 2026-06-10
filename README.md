@@ -68,10 +68,12 @@ Self-hosters writing their own CDK app today can match the contract by passing t
 
 The agent-facing surface is the hub's `POST https://hub.fixyourdocs.io/v1/reports` endpoint. Reports are anonymous (rate-limited by IP) and conform to the v0 schema specified at [docsfeedback.org/spec/v0](https://docsfeedback.org) and in the [protocol repo](https://github.com/fixyourdocs/protocol).
 
-Two ways to wire an agent to it:
+There are two adoption modes:
 
-- **Drop-in `AGENTS.md` block** — paste the snippet from [fixyourdocs/agents-md-snippet](https://github.com/fixyourdocs/agents-md-snippet) into your project's `AGENTS.md` / `CLAUDE.md` / `.cursorrules`. Works with any agent that reads those files; no MCP client required.
-- **MCP client** — use one of the SDKs ([Python](https://github.com/fixyourdocs/sdk-python), [TypeScript](https://github.com/fixyourdocs/sdk-typescript)) or the helper in [`mcp-server/`](mcp-server/) to expose a `file_doc_feedback` tool to clients that speak MCP (Claude Desktop, Cursor, …).
+- **Mode A — first-party (paste into your repo).** Paste the snippet from [fixyourdocs/agents-md-snippet](https://github.com/fixyourdocs/agents-md-snippet) into your project's `AGENTS.md` / `CLAUDE.md` / `.cursorrules`. Agents working **in your repo** report **your repo's** broken docs. Works with any agent that reads those files; no MCP client required.
+- **Mode B — consumer-side (install into your own agent).** Install [`@fixyourdocs/mcp-server`](mcp-server/) into your **own, global** agent/client config (Claude Desktop, Cursor, Codex, …). While you work on something unrelated, your agent can **offer** — with your confirmation, and on public docs only — to report the **third-party** docs it consulted that turned out to be broken, even if that project never added the snippet. The MCP server is the primary Mode B carrier; the consent prompt and the privacy/opt-out guards (refuse non-public `doc_url`s; honour a doc host's `/.well-known/docs-feedback.json` opt-out before anything leaves your machine) are enforced by the SDK client it builds on.
+
+In both modes the **receiver** (the docs owner) still has to claim and DNS-verify their domain and install the hub integration to receive anything — Mode B only removes the *reporting-side* install requirement. The SDKs ([Python](https://github.com/fixyourdocs/sdk-python), [TypeScript](https://github.com/fixyourdocs/sdk-typescript)) and the helper in [`mcp-server/`](mcp-server/) implement the `file_doc_feedback` path for both.
 
 ## Contributing
 
