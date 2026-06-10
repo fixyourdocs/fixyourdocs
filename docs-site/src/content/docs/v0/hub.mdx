@@ -1,6 +1,6 @@
 ---
 title: The FixYourDocs Hub
-description: What hub.fixyourdocs.io is, the endpoints it exposes, and the full path to receiving docs-feedback reports as GitHub Issues — connect the GitHub App, then verify the domain your docs live on.
+description: What hub.fixyourdocs.io is, the endpoints it exposes, and the full path to receiving docs-feedback reports as GitHub Issues — connect the GitHub App, then verify you own your docs (a domain via DNS, or a GitHub Pages site via the App).
 ---
 
 import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
@@ -8,7 +8,7 @@ import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
 The **Hub** at `hub.fixyourdocs.io` is the reference endpoint for the
 [Docs Feedback Protocol](/v0/protocol/). It accepts reports from anyone and
 forwards them to a maintainer's GitHub repository as Issues — but only for
-domains that maintainer has verified they own.
+docs that maintainer has verified they own.
 
 ## Sending a report
 
@@ -37,9 +37,11 @@ reports are de-duplicated rather than rejected.
 ## How a report becomes a GitHub Issue
 
 The Hub forwards a report to a repository **only when** the report's
-`doc_url` host matches a domain that:
+`doc_url` matches docs that:
 
-1. a maintainer has **verified they own** (via a DNS-TXT record), and
+1. a maintainer has **verified they own** — either a **domain** (via a
+   DNS-TXT record) or a **GitHub Pages site** (via the GitHub App on the repo
+   that publishes it), and
 2. is bound to a **configured GitHub integration**.
 
 <Aside type="caution" title="Why verification is required">
@@ -112,11 +114,46 @@ That's it. From then on, any report whose `doc_url` is on
 forwarded to your repo as a GitHub Issue.
 
 <Aside type="note" title="What you can claim">
-You can verify a specific host (`docs.your-org.com`) or your registrable
-domain (`your-org.com`, which then covers all its subdomains). You cannot
-claim a public suffix (`com`, `github.io`, `pages.dev`) — the Hub rejects
-those.
+By DNS you can verify a specific host (`docs.your-org.com`) or your
+registrable domain (`your-org.com`, which then covers all its subdomains).
+You cannot DNS-claim a public suffix (`com`, `github.io`, `pages.dev`) — the
+Hub rejects those. Docs hosted on **GitHub Pages** (`<user>.github.io`) are
+claimed a different way — see [Docs on GitHub Pages](#docs-on-github-pages).
 </Aside>
+
+## Docs on GitHub Pages
+
+If your docs are served from a **GitHub Pages** site
+(`https://<user>.github.io/<repo>/…`) there's no DNS zone to add a TXT record
+to — `github.io` is a public suffix the Hub won't let anyone claim. Verify
+the **repo that publishes the site** instead, using the GitHub App you
+already installed — no DNS step:
+
+<Steps>
+
+1. **Connect the publishing repo.** Point your GitHub integration at the repo
+   that publishes the Pages site (steps 2–3 above). Saving it proves the App
+   can write that repo.
+
+2. **Claim the Pages URL.** In the **GitHub Pages** section of settings, paste
+   the URL your docs are served from and claim it:
+
+   - a project site `https://<user>.github.io/<repo>/` is published by
+     `<user>/<repo>`;
+   - a user/org site `https://<user>.github.io/` is published by
+     `<user>/<user>.github.io`.
+
+   It verifies **immediately** — as long as the site's publishing repo is the
+   repo your integration is configured for. (Publishing from a *different*
+   repo than your forward target isn't supported yet; configure that repo
+   first.)
+
+</Steps>
+
+From then on, any report whose `doc_url` is under that Pages path forwards to
+your repo as a GitHub Issue, exactly like a verified domain. The longest
+claimed path wins, so `/<repo>/` routes independently of any other project's
+Pages site under the same `<user>.github.io`.
 
 ## Checking your setup
 

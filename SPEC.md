@@ -4,13 +4,13 @@
 
 ## 1. Product
 
-AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, they file a structured report via the Docs Feedback Protocol. The Hub is a **thin report forwarder**: it accepts reports, deduplicates them, and forwards each unique report as a GitHub Issue — to the repo of the maintainer who has **verified ownership** (DNS-TXT) of the report's doc-URL host. No verified owner for that host → no Issue.
+AI agents read documentation to help their users follow procedures. When they hit a gap, outdated section, contradiction, or dead end, they file a structured report via the Docs Feedback Protocol. The Hub is a **thin report forwarder**: it accepts reports, deduplicates them, and forwards each unique report as a GitHub Issue — to the repo of the maintainer who has **verified ownership** of the report's doc URL (a domain via DNS-TXT, or a GitHub Pages site via the GitHub App on the publishing repo). No verified owner for that doc → no Issue.
 
 V1 is intentionally narrow: no public dashboard, no public read API, no vendor directory, no replies-and-status workflow. Maintainers triage in their existing GitHub Issues UI; agents post structured reports through the existing protocol.
 
 ### Users
 
-- **Documentation maintainers** — sign up to the Hub, install the GitHub App on a repo, verify ownership of their docs domain (a DNS-TXT challenge), and point the Hub at that repo. From then on, the Hub turns each report whose doc URL is on one of their verified domains into a GitHub Issue on that repo.
+- **Documentation maintainers** — sign up to the Hub, install the GitHub App on a repo, verify ownership of their docs (a DNS-TXT challenge for a domain, or — for docs on GitHub Pages — a repo-scoped claim through the GitHub App), and point the Hub at that repo. From then on, the Hub turns each report whose doc URL is on one of their verified domains or claimed Pages paths into a GitHub Issue on that repo.
 - **AI agents (anonymous)** — call `POST /v1/reports` with no authentication, file reports against any doc URL. No registration, no rate-limit beyond IP token bucket. Domain ownership is the *maintainer's* concern, never the agent's: an agent claims nothing, and a report only routes if some maintainer has verified that doc URL's host.
 
 ### Value
@@ -29,8 +29,8 @@ V1 is intentionally narrow: no public dashboard, no public read API, no vendor d
   - **GitHub OAuth federation** — v0 nice-to-have (deferrable to v0.1).
 - GitHub App install flow (`/v1/integrations/github/install` + callback).
 - Per-maintainer integration config (`POST /v1/orgs/me/integrations/github`) — set target repo + Issue template.
-- Domain claim + DNS-TXT verification (`POST /v1/orgs/me/domains`, `POST /v1/orgs/me/domains/:domain/verify`) — a maintainer proves they own a docs domain. This is the routing key (see §5).
-- Forwarder Lambda — async-invoked on accepted report; resolves the report's `doc_url` host to the maintainer who verified that domain (or a parent of it); mints a GitHub App installation token; posts an Issue on their target repo. No verified domain → no Issue. Idempotent on `report_id`.
+- Domain / GitHub Pages claim + verification (`POST /v1/orgs/me/domains`, `POST /v1/orgs/me/domains/:domain/verify`) — a maintainer proves they own a docs domain (DNS-TXT), or a GitHub Pages site (the same route accepts a `*.github.io` URL and verifies it against the GitHub App on the publishing repo — no DNS). This is the routing key (see §5).
+- Forwarder Lambda — async-invoked on accepted report; resolves the report's `doc_url` to the maintainer who verified that domain (or a parent of it) or claimed that GitHub Pages path (longest-prefix wins); mints a GitHub App installation token; posts an Issue on their target repo. No verified owner → no Issue. Idempotent on `report_id`.
 
 ### Out (V2+)
 
@@ -88,7 +88,7 @@ Self-hosted deployments derive these hostnames from `FYD_ROOT_DOMAIN` (see [READ
 |---|---|---|
 | Report sink | GitHub Issues via GitHub App installation token, posted by an async-invoked forwarder Lambda | Maintainers already triage in GitHub; no new UI to build at v0 |
 | Agent auth on `POST /v1/reports` | None — rate-limited only | Lowest friction; reports are public-by-design (they become GitHub Issues) |
-| Report routing | The report's `doc_url` host is matched against domains maintainers have **DNS-TXT-verified**; the most-specific verified owner's `configured` repo wins. No verified match → no Issue | `doc_url` already carries the host (no protocol change needed); DNS-TXT proves ownership, so nobody can route reports into a repo they don't control |
+| Report routing | The report's `doc_url` is matched against domains maintainers have **DNS-TXT-verified** (most-specific verified owner wins) or **GitHub Pages paths** they've claimed via the App (longest claimed prefix wins); the owner's `configured` repo gets the Issue. No verified match → no Issue | `doc_url` already carries the host + path (no protocol change needed); DNS-TXT or App-installation proves ownership, so nobody can route reports into a repo they don't control |
 | Frontend stack | Vite + React SPA, S3 + CloudFront via CDK | Fully CDK-managed, no Amplify lock-in |
 | Human auth | Cognito user pool, in-app SRP via `amazon-cognito-identity-js`. Two sign-in paths into the same user pool: email + password (v0 must-have) and GitHub OAuth federation (v0 nice-to-have) | Native AWS, low ops; SRP keeps passwords client-side. GitHub OAuth gives maintainers who already use GitHub a one-click path without granting any third-party app extra access |
 | GitHub integration vs GitHub OAuth | Separate flows. Every maintainer (email-signup or GitHub-OAuth-signup) completes the GitHub App install once. The GitHub App + the GitHub OAuth login app can be the same registered app | `installations:write` and `read:user` are independent scopes; reusing one app simplifies setup |
