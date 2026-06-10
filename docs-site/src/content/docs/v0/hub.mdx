@@ -111,10 +111,26 @@ of exactly what you'll see. (Click any screenshot to enlarge it.)
 
    ![The domain flipping to verified in the settings screen](/v0/hub/6.png)
 
-8. **Send a test report.** Confirm the whole path end-to-end with the **Send
-   a test report** button on the settings screen. Within a moment a matching
-   `[docs] smoke test — ignore` Issue appears in your configured repo — close
-   it and you're live.
+8. **Send a test report.** Confirm the whole path end-to-end by POSTing one
+   report against a doc on your now-verified domain — swap in your own
+   domain for `docs.your-org.com`:
+
+   ```sh
+   curl -X POST https://hub.fixyourdocs.io/v1/reports \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "protocol_version": "0",
+       "doc_url": "https://docs.your-org.com/",
+       "agent":   { "name": "smoke-test" },
+       "report":  {
+         "kind":    "other",
+         "summary": "smoke test — ignore"
+       }
+     }'
+   ```
+
+   Within a moment a matching `[docs] smoke test — ignore` Issue appears in
+   your configured repo — close it and you're live.
 
    ![The test report arriving as a GitHub Issue](/v0/hub/7.png)
 
