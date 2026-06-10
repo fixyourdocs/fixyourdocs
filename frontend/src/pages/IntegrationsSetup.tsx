@@ -10,6 +10,7 @@ import {
   api,
   deleteAccount,
   deleteDomain,
+  deletePagesClaim,
   deleteIntegration,
   deleteRepoConfig,
 } from '../lib/api';
@@ -556,7 +557,7 @@ function PagesSection({ pages, configured }: { pages: PagesView[]; configured: b
   });
 
   const remove = useMutation({
-    mutationFn: (key: string) => deleteDomain(key),
+    mutationFn: (key: string) => deletePagesClaim(key),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
     onError: (err: ApiError) => setError(err.message),
   });

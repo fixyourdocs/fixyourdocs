@@ -59,4 +59,28 @@ describe('DELETE /v1/orgs/me/domains/{domain}', () => {
     const res = await call(authEvent('gone.io'));
     expect(res.statusCode).toBe(404);
   });
+
+  // P0-19 — a Pages claim key has slashes that can't ride the {domain} path
+  // param, so the frontend sends its base64url token; the handler decodes it
+  // back to the stored key. (A raw `pages:.../...` key would 404 at the gateway
+  // before ever reaching this Lambda — that's the "Failed to fetch" bug.)
+  it('pages delete: base64url token decodes to the stored key, scoped to sub', async () => {
+    const key = 'pages:fyd-demo-maintainer.github.io/demo-libraryx/';
+    const token = Buffer.from(key, 'utf8').toString('base64url');
+    expect(token).not.toContain('.'); // path-safe: survives the {domain} param
+    sendMock.mockResolvedValueOnce({});
+    const res = await call(authEvent(token));
+    expect(res.statusCode).toBe(200);
+    const del = sendMock.mock.calls[0][0].input;
+    expect(del.Key).toEqual({ domain: key });
+    expect(del.ExpressionAttributeValues).toEqual({ ':sub': 'user-1' });
+  });
+
+  it('rejects a token that does not decode to a pages key → 400', async () => {
+    const token = Buffer.from('not-a-pages-key', 'utf8').toString('base64url');
+    const res = await call(authEvent(token));
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body).error.code).toBe('invalid_claim');
+    expect(sendMock).not.toHaveBeenCalled();
+  });
 });

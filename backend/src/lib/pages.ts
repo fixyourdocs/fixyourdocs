@@ -48,6 +48,20 @@ export function pagesClaimKey(host: string, pathPrefix: string): string {
   return `${PAGES_KEY_PREFIX}${host}${pathPrefix}`;
 }
 
+// A Pages claim key embeds the path-prefix, so it always contains `/` (and a
+// `:`). That key can't ride in the single-segment `{domain}` path param of the
+// DELETE route: API Gateway HTTP API decodes `%2F` back to `/` and the path no
+// longer matches the route, 404ing at the gateway with no CORS headers — which
+// the browser surfaces as "Failed to fetch". So the DELETE handle is the
+// base64url of the key: a path-safe token (alphabet `A-Za-z0-9-_`, no `/`,
+// `:`, `.` or `%`) the gateway passes through untouched. The frontend encodes;
+// `decodePagesDeleteToken` is the backend end. Distinguishing a token from a
+// DNS domain on the shared route is trivial — a domain always has a `.`, a
+// base64url token never does.
+export function decodePagesDeleteToken(token: string): string {
+  return Buffer.from(token, 'base64url').toString('utf8');
+}
+
 // Map a user-supplied Pages URL (scheme optional) to the publishing repo and
 // the canonical path-prefix being claimed. Throws HttpError(400) on anything
 // that isn't a resolvable *.github.io URL.
