@@ -5,20 +5,30 @@ import { wrapAuth } from '../../lib/wrap';
 import { ok } from '../../lib/response';
 import { ddb, tables } from '../../lib/db';
 import { normalizeDomain } from '../../lib/domains';
-import { isPagesKey } from '../../lib/pages';
+import { isPagesKey, decodePagesDeleteToken } from '../../lib/pages';
 
 // DELETE /v1/orgs/me/domains/{domain} (P0-16; extended P0-19). Authenticated.
 // Hard-deletes the caller's claim (DNS domain — pending or verified — or a
-// GitHub Pages claim). For DNS, normalizeDomain canonicalises the path param
-// (casing/IDN) so it can't dodge the owner check by hitting a different stored
-// key; a Pages claim key (`pages:…`) is already canonical and is deleted as-is.
+// GitHub Pages claim). Two handle shapes share this route:
+//   - a DNS domain — always contains a `.`; normalizeDomain canonicalises it
+//     (casing/IDN) so it can't dodge the owner check by hitting a different key;
+//   - a GitHub Pages claim — the synthetic key (`pages:<host>/<prefix>/`)
+//     contains slashes that can't survive the `{domain}` path param, so the
+//     frontend sends its base64url token instead (no `.`); we decode it back to
+//     the stored key. See decodePagesDeleteToken in lib/pages.
 // The owner check is a conditional delete: a row that isn't yours — or is
 // already gone — fails the condition and returns 404, so we never leak whether
 // some other user owns the claim.
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
   const user = requireUser(event);
-  const rawKey = decodeURIComponent(event.pathParameters?.domain ?? '');
-  const domain = isPagesKey(rawKey) ? rawKey : normalizeDomain(rawKey);
+  const param = decodeURIComponent(event.pathParameters?.domain ?? '');
+  let domain: string;
+  if (param.includes('.')) {
+    domain = normalizeDomain(param);
+  } else {
+    domain = decodePagesDeleteToken(param);
+    if (!isPagesKey(domain)) throw new HttpError(400, 'invalid_claim', 'Not a valid claim identifier');
+  }
 
   try {
     await ddb.send(
