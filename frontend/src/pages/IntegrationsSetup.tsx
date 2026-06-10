@@ -56,11 +56,20 @@ interface DomainView {
   verifiedAt?: string;
   dns_record?: DnsRecord;
 }
+interface PagesView {
+  key: string;
+  pages_url: string;
+  repo: string;
+  status: string;
+  createdAt?: string;
+  verifiedAt?: string;
+}
 interface Me {
   sub: string;
   email?: string;
   integration: Integration | null;
   domains: DomainView[];
+  pages: PagesView[];
 }
 
 const BADGE: Record<string, string> = {
@@ -149,6 +158,7 @@ export function IntegrationsSetup() {
         <>
           <GithubRepoSection integration={me.data.integration} />
           <DomainsSection domains={me.data.domains} />
+          <PagesSection pages={me.data.pages ?? []} configured={me.data.integration?.status === 'configured'} />
           <p className="text-xs text-slate-500">
             Agents post to{' '}
             <code className="rounded bg-slate-100 px-1">{`POST ${env.HUB_BASE_URL}/v1/reports`}</code>. A report whose{' '}
@@ -515,6 +525,115 @@ function DomainsSection({ domains }: { domains: DomainView[] }) {
                       {hint && <p className="text-xs text-amber-700">{hint}</p>}
                     </div>
                   )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+// (P0-19) GitHub Pages docs (acme.github.io/...) have no DNS zone to TXT-verify.
+// Instead the claim is verified against the GitHub App installation the user
+// already proved control of — so it only works once the repo is configured, and
+// the Pages site's publishing repo must match that configured repo.
+function PagesSection({ pages, configured }: { pages: PagesView[]; configured: boolean }) {
+  const qc = useQueryClient();
+  const [url, setUrl] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const claim = useMutation({
+    mutationFn: () =>
+      api('/v1/orgs/me/domains', { method: 'POST', body: JSON.stringify({ domain: url.trim() }) }),
+    onSuccess: () => {
+      setUrl('');
+      setError(null);
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: (err: ApiError) => setError(err.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: (key: string) => deleteDomain(key),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+    onError: (err: ApiError) => setError(err.message),
+  });
+
+  function onClaim(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    claim.mutate();
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-base font-semibold text-slate-900">GitHub Pages</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Docs on a <code className="rounded bg-slate-100 px-1 text-xs">*.github.io</code> site can't be
+          DNS-verified. Claim the Pages URL instead — it's verified through the GitHub App on the repo that
+          publishes it.
+        </p>
+      </CardHeader>
+      <CardBody className="space-y-5">
+        {!configured && (
+          <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Connect and configure the publishing repo in <strong>GitHub repo</strong> above first. The Pages
+            site you claim must be published by that same repo.
+          </p>
+        )}
+
+        <form onSubmit={onClaim} className="flex items-end gap-2">
+          <div className="flex-1">
+            <Label htmlFor="pagesUrl">Add a GitHub Pages URL</Label>
+            <Input
+              id="pagesUrl"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://acme.github.io/widgets/"
+              disabled={!configured}
+              required
+            />
+          </div>
+          <Button type="submit" disabled={!configured || claim.isPending}>
+            {claim.isPending ? 'Claiming…' : 'Claim Pages site'}
+          </Button>
+        </form>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        {pages.length === 0 ? (
+          <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+            No GitHub Pages sites claimed yet.
+          </p>
+        ) : (
+          <ul className="space-y-4">
+            {pages.map((p) => {
+              const removing = remove.isPending && remove.variables === p.key;
+              return (
+                <li key={p.key} className="rounded-md border border-slate-200 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <code className="block truncate font-mono text-sm text-slate-800">{p.pages_url}</code>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Reports route to <code className="rounded bg-slate-100 px-1">{p.repo}</code>
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge status={p.status} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => remove.mutate(p.key)}
+                        disabled={removing}
+                      >
+                        {removing ? 'Removing…' : 'Remove'}
+                      </Button>
+                    </div>
+                  </div>
                 </li>
               );
             })}
