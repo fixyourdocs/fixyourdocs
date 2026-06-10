@@ -58,7 +58,7 @@
     "inspector": "pnpm build && npx -y @modelcontextprotocol/inspector node dist/cli.js"
   },
   "dependencies": {
-    "@fixyourdocs/sdk": "^0.1.0",
+    "@fixyourdocs/sdk": "^0.3.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.23.8"
   },
