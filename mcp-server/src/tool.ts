@@ -14,7 +14,11 @@ export const TOOL_DESCRIPTION =
   "(https://hub.fixyourdocs.io). Use this when you encounter docs that are " +
   "broken, incorrect, outdated, missing, unclear, or otherwise unhelpful " +
   "while following them. Each report is forwarded to a GitHub Issue on the " +
-  "doc owner's repository when they have a FixYourDocs integration installed.";
+  "doc owner's repository when they have a FixYourDocs integration installed. " +
+  "Offer to file the report and only submit once the developer confirms — ask " +
+  "before sending. Report only public third-party documentation served over " +
+  "https://; never report the developer's own private project docs, internal " +
+  "or localhost URLs, secrets, or transcript excerpts.";
 
 // Mirror of the v0 `Report` envelope. Kept intentionally close to the wire
 // schema so the description the model sees matches what it'll see in the
@@ -127,7 +131,7 @@ export async function handleFileDocFeedback(
   const client = new Client({
     apiUrl: hubUrl,
     fetch: options.fetch,
-    userAgent: "fixyourdocs-mcp-server/0.1.1",
+    userAgent: "fixyourdocs-mcp-server/0.2.0",
   });
   const result = await client.send(report);
 

@@ -91,6 +91,41 @@ npx @modelcontextprotocol/inspector npx -y @fixyourdocs/mcp-server
 The inspector UI lists `file_doc_feedback`, accepts a report, and shows the
 `{ id, url }` returned by the Hub.
 
+## Reporting third-party docs (consumer side / Mode B)
+
+There are two ways to adopt FixYourDocs, and the MCP server is the primary
+carrier for the second one:
+
+- **Mode A — first-party.** A docs maintainer pastes the
+  [`AGENTS.md` snippet](/v0/agents-md/) into *their* repo so agents working
+  in it report *that* repo's docs.
+- **Mode B — consumer-side.** *You* — a developer building something
+  unrelated — install this server into your **own, global** client config
+  (the same config blocks shown above, in your user-level config rather than
+  one project's). When your agent consults a **third-party** library's, API's,
+  or framework's docs and they turn out to be broken, it can **offer** to file
+  a report on them, even though that project never instrumented its own repo.
+  The report routes to whoever has DNS-verified that doc's domain.
+
+Because Mode B points an agent at the open internet on your behalf, the tool
+is safe-by-default:
+
+- **Ask before sending.** The `file_doc_feedback` tool description instructs
+  the agent to offer and wait for your confirmation, not to fire on its own.
+- **Public docs only.** A `doc_url` that is `localhost`, a private / internal
+  host, an RFC&nbsp;1918 or link-local address, or a non-`https://` page is
+  refused **before** anything leaves your machine.
+- **Opt-out honoured.** Before posting, the client fetches the doc host's
+  `/.well-known/docs-feedback.json`; if it says `opt_in: false` the report is
+  refused. Results are cached per host for 24h.
+
+<Aside type="note">
+The consent prompt ships in this server's tool description; the privacy guard
+and opt-out discovery are enforced by the SDK client the server builds on
+(`@fixyourdocs/sdk` 0.3.0 and later). They activate once this server is built
+against that SDK version.
+</Aside>
+
 <Aside type="note">
 The server is registered in the MCP Registry as `io.fixyourdocs/mcp-server`.
 Reports go to `hub.fixyourdocs.io`; they become GitHub Issues once the doc
