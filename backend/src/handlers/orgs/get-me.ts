@@ -5,6 +5,7 @@ import { ok } from '../../lib/response';
 import { wrapAuth } from '../../lib/wrap';
 import { ddb, tables } from '../../lib/db';
 import { challengeRecord, type DomainRow } from '../../lib/domains';
+import { pagesUrl } from '../../lib/pages';
 
 // P0-08 Step 4a/6 — the SPA's settings snapshot. Returns the JWT subject +
 // email (sign-in verification target), the caller's GitHub integration (so the
@@ -27,6 +28,25 @@ interface DomainView {
   createdAt?: string;
   verifiedAt?: string;
   dns_record?: ReturnType<typeof challengeRecord>;
+}
+
+interface PagesView {
+  key: string; // synthetic claim key (used to Remove via the DELETE route)
+  pages_url: string;
+  repo: string;
+  status: string;
+  createdAt?: string;
+  verifiedAt?: string;
+}
+
+// Pages claims share the Domains table with a synthetic `pages:` key + a
+// `kind: 'pages'` marker and extra repo fields (P0-19).
+interface PagesRow extends DomainRow {
+  kind?: string;
+  host?: string;
+  pathPrefix?: string;
+  repoOwner?: string;
+  repoName?: string;
 }
 
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
@@ -52,6 +72,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
   // fails (e.g. the index isn't available yet) fall back to an empty list
   // rather than failing the whole response.
   let domains: DomainView[] = [];
+  let pages: PagesView[] = [];
   try {
     const res = await ddb.send(
       new QueryCommand({
@@ -61,7 +82,12 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
         ExpressionAttributeValues: { ':u': user.sub },
       }),
     );
-    domains = ((res.Items as DomainRow[] | undefined) ?? [])
+    const rows = (res.Items as PagesRow[] | undefined) ?? [];
+    const byCreated = (a: { createdAt?: string }, b: { createdAt?: string }) =>
+      (a.createdAt ?? '').localeCompare(b.createdAt ?? '');
+
+    domains = rows
+      .filter((d) => d.kind !== 'pages')
       .map((d) => ({
         domain: d.domain,
         status: d.status,
@@ -69,10 +95,22 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
         verifiedAt: d.verifiedAt,
         dns_record: d.status === 'pending' ? challengeRecord(d.domain, d.challengeToken) : undefined,
       }))
-      .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
+      .sort(byCreated);
+
+    pages = rows
+      .filter((d) => d.kind === 'pages')
+      .map((d) => ({
+        key: d.domain,
+        pages_url: pagesUrl(d.host ?? '', d.pathPrefix ?? '/'),
+        repo: `${d.repoOwner ?? ''}/${d.repoName ?? ''}`,
+        status: d.status,
+        createdAt: d.createdAt,
+        verifiedAt: d.verifiedAt,
+      }))
+      .sort(byCreated);
   } catch (err) {
     console.log('domains_list_unavailable', { sub: user.sub, err: (err as Error).name });
   }
 
-  return ok({ sub: user.sub, email: user.email, integration, domains }, getOrigin(event));
+  return ok({ sub: user.sub, email: user.email, integration, domains, pages }, getOrigin(event));
 });
