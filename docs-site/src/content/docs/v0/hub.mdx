@@ -83,27 +83,54 @@ of exactly what you'll see. (Click any screenshot to enlarge it.)
 
    ![Choosing the target repo and Issue template in the settings screen](/v0/hub/3.png)
 
-4. **Claim the domain your docs live on.** Enter the domain your docs are
-   served from (for example `docs.your-org.com`). The settings screen then
-   shows you a DNS **TXT** challenge record to publish.
+4. **Choose how you'll prove you own your docs.** Reports only forward once
+   the Hub confirms ownership, and how you prove it depends on **where your
+   docs are hosted**. Do **one** of these:
+
+   - **A custom domain** (e.g. `docs.your-org.com`) → publish a DNS **TXT**
+     record. Continue with steps 5–7 below.
+   - **GitHub Pages** (`<user>.github.io/…`) → no DNS; claim the Pages URL
+     through the App you just installed. Skip to
+     [Docs on GitHub Pages](#docs-on-github-pages), then return here for the
+     test report (step 8).
+
+5. **Claim the domain your docs live on.** *(Domain path.)* Enter the domain
+   your docs are served from (for example `docs.your-org.com`). The settings
+   screen then shows you a DNS **TXT** challenge record to publish.
 
    ![Claiming a domain in the settings screen](/v0/hub/4.png)
 
-5. **Publish the TXT record** in your DNS, copying the name and value
+6. **Publish the TXT record** in your DNS, copying the name and value
    exactly as the settings screen shows them.
 
    ![Publishing the DNS TXT challenge record](/v0/hub/5.png)
 
-6. **Verify.** Once DNS has propagated, click **Verify**. On a match the
+7. **Verify.** Once DNS has propagated, click **Verify**. On a match the
    domain flips to `verified`. (DNS can take a few minutes — if it isn't
    visible yet you'll see a "still pending" hint; just try again shortly.)
 
    ![The domain flipping to verified in the settings screen](/v0/hub/6.png)
 
-7. **Send a test report.** Confirm the whole path end-to-end with the **Send
-   a test report** button on the settings screen. Within a moment a matching
-   `[docs] smoke test — ignore` Issue appears in your configured repo — close
-   it and you're live.
+8. **Send a test report.** Confirm the whole path end-to-end by POSTing one
+   report against a doc on your now-verified domain — swap in your own
+   domain for `docs.your-org.com`:
+
+   ```sh
+   curl -X POST https://hub.fixyourdocs.io/v1/reports \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "protocol_version": "0",
+       "doc_url": "https://docs.your-org.com/",
+       "agent":   { "name": "smoke-test" },
+       "report":  {
+         "kind":    "other",
+         "summary": "smoke test — ignore"
+       }
+     }'
+   ```
+
+   Within a moment a matching `[docs] smoke test — ignore` Issue appears in
+   your configured repo — close it and you're live.
 
    ![The test report arriving as a GitHub Issue](/v0/hub/7.png)
 
@@ -123,7 +150,8 @@ claimed a different way — see [Docs on GitHub Pages](#docs-on-github-pages).
 
 ## Docs on GitHub Pages
 
-If your docs are served from a **GitHub Pages** site
+This is the **GitHub Pages path** from step 4 above — the alternative to the
+DNS domain claim. If your docs are served from a **GitHub Pages** site
 (`https://<user>.github.io/<repo>/…`) there's no DNS zone to add a TXT record
 to — `github.io` is a public suffix the Hub won't let anyone claim. Verify
 the **repo that publishes the site** instead, using the GitHub App you
@@ -149,6 +177,9 @@ already installed — no DNS step:
    first.)
 
 </Steps>
+
+With the Pages site claimed, head back to **step 8** above to send a test
+report and confirm the path end-to-end.
 
 From then on, any report whose `doc_url` is under that Pages path forwards to
 your repo as a GitHub Issue, exactly like a verified domain. The longest

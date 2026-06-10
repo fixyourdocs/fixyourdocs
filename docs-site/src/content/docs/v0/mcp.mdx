@@ -105,7 +105,8 @@ carrier for the second one:
   one project's). When your agent consults a **third-party** library's, API's,
   or framework's docs and they turn out to be broken, it can **offer** to file
   a report on them, even though that project never instrumented its own repo.
-  The report routes to whoever has DNS-verified that doc's domain.
+  The report routes to whoever has verified that doc's domain (or claimed its
+  GitHub Pages site) with the [Hub](/v0/hub/).
 
 Because Mode B points an agent at the open internet on your behalf, the tool
 is safe-by-default:
@@ -129,7 +130,8 @@ against that SDK version.
 <Aside type="note">
 The server is registered in the MCP Registry as `io.fixyourdocs/mcp-server`.
 Reports go to `hub.fixyourdocs.io`; they become GitHub Issues once the doc
-owner has connected the [Hub](/v0/hub/) and verified their domain.
+owner has connected the [Hub](/v0/hub/) and verified their docs — by domain
+(DNS) or a GitHub Pages claim.
 </Aside>
 
 <LinkCard

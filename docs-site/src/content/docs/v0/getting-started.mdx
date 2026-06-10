@@ -128,25 +128,44 @@ that's already on file.
 <TabItem label="Agent">
 
 You're wiring an AI coding agent so it files reports on its own when it
-hits broken docs. There's nothing to install on the agent side — pick the
-path that matches your client.
+hits broken docs. There are **two adoption modes**, and you can use either
+or both.
 
 <Steps>
 
-1. **Drop the AGENTS.md block into your repo.**
+1. **Mode A — wire a single repo (first-party).**
 
    ```sh
    npx @fixyourdocs/sdk init
    ```
 
    This appends the canonical [Docs Feedback Protocol](/v0/protocol/) block
-   to your `AGENTS.md` (or `CLAUDE.md`, `.cursor/rules`, or
-   `.github/copilot-instructions.md`). Any agent that reads that file now
-   knows how to file a report. See the [AGENTS.md snippet](/v0/agents-md/)
-   page for what the block contains.
+   to that repo's `AGENTS.md` (or `CLAUDE.md`, `.cursor/rules`, or
+   `.github/copilot-instructions.md`). The block is repo-scoped on
+   purpose — it tells any agent working in *this* repo how to report *this
+   repo's* docs. See the [AGENTS.md snippet](/v0/agents-md/) page for what
+   the block contains.
 
-2. **Or add the MCP server** for MCP-aware clients (Claude Desktop, Cursor,
-   Codex). Add this to your client's MCP config:
+2. **Mode B — init your global config, report anywhere (consumer-side).**
+
+   ```sh
+   npx @fixyourdocs/sdk init --global   # TypeScript SDK
+   pipx run fixyourdocs init --global   # Python equivalent
+   ```
+
+   Same `init`, but `--global` writes the **consumer-side** block to your
+   global agent config — `~/.claude/CLAUDE.md` by default; pass
+   `--file <path>` to target another (e.g. `~/.codex/AGENTS.md`). Now your
+   agent — across *every* project you work in — offers to report the
+   **third-party** docs it consults: with your OK, on public docs only,
+   never your own private code or internal pages. Re-running is a no-op once
+   the block is present. Background on the safety guards is on
+   [Reporting third-party docs](/v0/mcp/#reporting-third-party-docs-consumer-side--mode-b).
+
+3. **Add the MCP server** for MCP-aware clients (Claude Desktop, Cursor,
+   Codex). It's the recommended carrier for **Mode B** — it enforces the
+   consent and public-docs-only guards for you. Add this to your client's
+   MCP config:
 
    ```jsonc
    {
@@ -162,16 +181,11 @@ path that matches your client.
    The agent gets one tool, `file_doc_feedback`. Full per-client config is
    on the [MCP server](/v0/mcp/) page.
 
-   <Aside type="tip">
-   Two adoption modes: paste the snippet into a **repo** (Mode A) so agents
-   report *that* repo's docs, or install the MCP server into your **own,
-   global** client config (Mode B) so your agent offers — with your OK, on
-   public docs only — to report the **third-party** docs it consults. See
-   [Reporting third-party docs](/v0/mcp/#reporting-third-party-docs-consumer-side--mode-b).
-   </Aside>
-
-3. **Confirm the path works** by sending a report by hand — the exact call
-   the agent will make:
+4. **Confirm the path works** by sending a report by hand. Your agent won't
+   issue this exact command — via the MCP server it calls the
+   `file_doc_feedback` tool, and via the snippet it composes its own
+   request — but every path ends in this same `POST /v1/reports`, so running
+   it once proves the Hub accepts what they send:
 
    ```sh
    curl -X POST https://hub.fixyourdocs.io/v1/reports \

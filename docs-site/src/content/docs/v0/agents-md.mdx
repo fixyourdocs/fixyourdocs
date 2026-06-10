@@ -6,11 +6,19 @@ description: The paste-ready AGENTS.md block that wires any AI coding agent into
 import { Aside, LinkCard } from '@astrojs/starlight/components';
 
 Agents already read `AGENTS.md` (Cursor, Claude Code, Codex, Gemini CLI,
-Copilot, …). One paste-ready block turns every agent run on your repo into a
-structured signal about what's wrong with your docs — without changing any
-agent.
+Copilot, …). One paste-ready block turns agent runs into a structured signal
+about what's wrong with docs — without changing any agent.
 
-## The block
+There are **two blocks**, for the two ways to adopt the protocol:
+
+- **Mode A — the first-party block.** Paste it into *your* repo's
+  `AGENTS.md` so agents working there report *that repo's* docs. This is the
+  one below.
+- **Mode B — the consumer-side block.** Paste it into *your own global* agent
+  config so your agent reports the **third-party** docs it consults across
+  every project. See [The consumer-side block (Mode B)](#the-consumer-side-block-mode-b).
+
+## The first-party block (Mode A)
 
 Append this to your repo's `AGENTS.md` (or `CLAUDE.md`, `.cursor/rules`, or
 `.github/copilot-instructions.md`):
@@ -62,6 +70,57 @@ pipx run fixyourdocs init # Python
 
 The [CLI](/v0/cli/) detects whichever file your repo uses and appends the
 block. Re-running is a no-op when it's already present.
+
+## The consumer-side block (Mode B)
+
+The block above is **repo-scoped on purpose** — it says *"documentation in
+**this repository**."* If instead you want **your own agent** to report the
+broken **third-party** docs it stumbles on while you build something else,
+paste this block into your *global* agent config —
+`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, your global Cursor rules, or
+wherever your client reads global instructions — rather than into any one
+project's `AGENTS.md`:
+
+````markdown
+## Reporting stale third-party docs
+
+While working on this project, if you rely on a **third-party / external**
+documentation page — a library, API, framework, or hosted docs site you
+consulted, *not* this project's own docs, and never an internal, private,
+`localhost`, or login-gated page — and you find it broken, incorrect,
+outdated, or incomplete, **offer to file a structured report** via the
+Docs Feedback Protocol so its maintainers can fix it for the next agent
+(or human) that hits the same issue.
+
+Rules:
+
+- **Ask before sending.** Offer to file the report; only send once the
+  developer confirms.
+- **Public docs only.** Only report a page served over public `https://`.
+  Never report `localhost`, internal, private, or login-gated URLs.
+- **Never include private context.** No private code, secrets, internal
+  URLs, or transcript excerpts from this project.
+
+Prefer the `file_doc_feedback` MCP tool from `@fixyourdocs/mcp-server`
+if available; otherwise POST to `https://hub.fixyourdocs.io/v1/reports`
+per https://docsfeedback.org.
+````
+
+The difference from Mode A is scope and consent: this block is **global**
+(it travels with you, not a repo) and it tells the agent to **offer** —
+public docs only, with your OK — rather than report silently.
+
+Install it the same way, with `--global`:
+
+```sh
+npx @fixyourdocs/sdk init --global   # Node — default ~/.claude/CLAUDE.md
+pipx run fixyourdocs init --global   # Python equivalent
+```
+
+Then add the [MCP server](/v0/mcp/) — the recommended Mode B carrier, which
+enforces the consent + public-docs-only + opt-out guards for you. The full
+safety model is on the
+[MCP page](/v0/mcp/#reporting-third-party-docs-consumer-side--mode-b).
 
 ## Keeping it current
 
