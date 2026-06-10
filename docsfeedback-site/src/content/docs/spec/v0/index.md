@@ -2,7 +2,7 @@
 title: Docs Feedback Protocol — v0
 description: Wire format and HTTP transport for AI agents to file structured reports against documentation pages.
 ---
-**Status:** draft (`v0.1.0`).
+**Status:** draft (`v0.1.1`).
 **Editors:** the FixYourDocs project.
 **Repository:** <https://github.com/fixyourdocs/protocol>.
 **Canonical URL:** <https://docsfeedback.org/spec/v0>.
@@ -292,6 +292,33 @@ already loaded the page:
 
 The well-known document is authoritative; the meta tag is a
 convenience.
+
+### 5.4 Consumer-side clients
+
+A client may report on docs it merely *consulted* while doing unrelated
+work — a third-party library, API, framework, or hosted docs site the
+agent read but does not own — rather than on the docs of the project it
+is installed in. This "report-anywhere" usage carries the **same**
+obligations as any other v0 client, plus two that matter more because
+the client is now pointed at the open internet on a user's behalf:
+
+1. **Opt-out is still binding.** A consumer-side client MUST run §5.2
+   discovery against the `doc_url` host and MUST NOT submit when the
+   host publishes `opt_in: false`, exactly as in §5.2 step 3. The
+   `doc_url` host — not the project the client runs in — is the host
+   whose opt-out governs.
+2. **Privacy guard before egress.** Because the report leaves the user's
+   machine for a third party, the client MUST honour §9 and §10
+   strictly: it MUST NOT transmit the user's own project's private
+   source, internal URLs, secrets, or transcript excerpts, and it
+   SHOULD refuse outright to report a `doc_url` that is not a public
+   `https://` page (e.g. `localhost`, loopback, RFC 1918 / link-local
+   addresses, or `*.internal` / `*.local` hosts) — such a URL is by
+   construction not third-party public documentation. The consent of
+   the human the agent acts for SHOULD be obtained before sending.
+
+These are clarifications of existing §5.2, §9, and §10 obligations for
+the consumer-side case; they do not change the wire format.
 
 ## 6. Idempotency
 
