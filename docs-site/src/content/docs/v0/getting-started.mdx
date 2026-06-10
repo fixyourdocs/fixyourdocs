@@ -181,8 +181,11 @@ or both.
    The agent gets one tool, `file_doc_feedback`. Full per-client config is
    on the [MCP server](/v0/mcp/) page.
 
-4. **Confirm the path works** by sending a report by hand — the exact call
-   the agent will make:
+4. **Confirm the path works** by sending a report by hand. Your agent won't
+   issue this exact command — via the MCP server it calls the
+   `file_doc_feedback` tool, and via the snippet it composes its own
+   request — but every path ends in this same `POST /v1/reports`, so running
+   it once proves the Hub accepts what they send:
 
    ```sh
    curl -X POST https://hub.fixyourdocs.io/v1/reports \
