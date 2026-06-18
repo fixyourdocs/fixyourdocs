@@ -6,7 +6,6 @@ import {
   FileText,
   Send,
   Github,
-  Play,
   BookOpen,
   Package,
   Sparkles,
@@ -96,22 +95,21 @@ function Hero() {
 function DemoEmbed() {
   return (
     <div>
-      <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
-        <div className="aspect-video w-full">
-          <div
-            role="img"
-            aria-label="A 60-second demo of FixYourDocs is in production. Coming soon."
-            className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500"
-          >
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-sky-700 shadow-sm">
-              <Play size={22} aria-hidden />
-            </span>
-            <p className="text-sm font-medium">60-second demo — coming soon.</p>
-            <p className="text-xs text-slate-500">
-              An agent files a report against a live docs page; the maintainer fixes it on stream.
-            </p>
-          </div>
-        </div>
+      <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-900 shadow-sm">
+        <video
+          className="w-full"
+          poster="/demo-poster.png"
+          controls
+          playsInline
+          preload="metadata"
+          width={1972}
+          height={1080}
+          aria-label="Demo: an AI agent hits a stale LibraryX doc, fixes its own code, and files a structured report that opens a GitHub issue."
+        >
+          <source src="/demo.mp4" type="video/mp4" />
+          Your browser does not support embedded video. Watch the demo on{' '}
+          <a href="https://fixyourdocs.io/demo.mp4">fixyourdocs.io/demo.mp4</a>.
+        </video>
       </div>
     </div>
   );
