@@ -108,6 +108,7 @@ function DemoEmbed() {
         <video
           ref={videoRef}
           className="h-full w-full object-contain"
+          poster="/demo-poster.png"
           controls={playing}
           playsInline
           preload="metadata"
