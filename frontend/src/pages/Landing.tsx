@@ -1,9 +1,11 @@
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Card, CardBody } from '../components/Card';
 import {
   CheckCircle2,
   FileText,
+  Play,
   Send,
   Github,
   BookOpen,
@@ -71,9 +73,8 @@ function Hero() {
             When agents hit broken docs, you hear about it.
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-slate-600">
-            An open protocol, reference SDKs, and a hosted hub. When an agent hits a broken or
-            outdated page, it files a structured report — and the hub opens a GitHub issue on
-            your docs repo.
+            An agent reports to FixYourDocs, and FixYourDocs opens an issue in the maintainer's
+            repo. An open protocol, reference SDKs, and a hosted hub.
           </p>
         </div>
         <div className="mt-10 max-w-3xl">
@@ -93,23 +94,46 @@ function Hero() {
 }
 
 function DemoEmbed() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  function play() {
+    videoRef.current?.play();
+    setPlaying(true);
+  }
+
   return (
-    <div>
-      <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-900 shadow-sm">
+    <div className="mx-auto max-w-[560px]">
+      <div className="relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-900 shadow-sm">
         <video
-          className="w-full"
+          ref={videoRef}
+          className="h-full w-full object-contain"
           poster="/demo-poster.png"
-          controls
+          controls={playing}
           playsInline
           preload="metadata"
-          width={1972}
+          width={1080}
           height={1080}
+          onPlay={() => setPlaying(true)}
           aria-label="Demo: an AI agent hits a stale LibraryX doc, fixes its own code, and files a structured report that opens a GitHub issue."
         >
           <source src="/demo.mp4" type="video/mp4" />
           Your browser does not support embedded video. Watch the demo on{' '}
           <a href="https://fixyourdocs.io/demo.mp4">fixyourdocs.io/demo.mp4</a>.
         </video>
+
+        {!playing && (
+          <button
+            type="button"
+            onClick={play}
+            aria-label="Play the demo"
+            className="group absolute inset-0 flex items-center justify-center bg-slate-900/30 transition-colors hover:bg-slate-900/20 focus-visible:outline-none"
+          >
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/95 text-sky-700 shadow-lg ring-1 ring-black/5 transition-transform duration-200 group-hover:scale-105">
+              <Play size={32} className="ml-1" fill="currentColor" aria-hidden />
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
