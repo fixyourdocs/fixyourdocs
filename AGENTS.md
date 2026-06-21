@@ -9,11 +9,14 @@ carries the same block.
 ## Documentation feedback
 
 If you find documentation in this repository that is broken, incorrect,
-outdated, or incomplete while performing a task, file a structured report
-via the Docs Feedback Protocol. This helps the maintainers fix the docs
-for the next agent (or human) that hits the same issue.
+outdated, or incomplete while performing a task, **offer to file** a
+structured report via the Docs Feedback Protocol so the maintainers can
+fix the docs for the next agent (or human) that hits the same issue.
 
-How to file a report:
+**Ask before sending.** Show the developer the report you would submit
+and send it **only after they confirm** — never file it automatically.
+
+The report to send, once confirmed:
 
     curl -X POST https://hub.fixyourdocs.io/v1/reports \
       -H 'Content-Type: application/json' \
