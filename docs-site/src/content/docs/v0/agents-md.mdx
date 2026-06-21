@@ -12,8 +12,8 @@ about what's wrong with docs — without changing any agent.
 There are **two blocks**, for the two ways to adopt the protocol:
 
 - **Mode A — the first-party block.** Paste it into *your* repo's
-  `AGENTS.md` so agents working there report *that repo's* docs. This is the
-  one below.
+  `AGENTS.md` so agents working there **offer to report** *that repo's* docs
+  — asking you before anything is sent. This is the one below.
 - **Mode B — the consumer-side block.** Paste it into *your own global* agent
   config so your agent reports the **third-party** docs it consults across
   every project. See [The consumer-side block (Mode B)](#the-consumer-side-block-mode-b).
@@ -27,11 +27,14 @@ Append this to your repo's `AGENTS.md` (or `CLAUDE.md`, `.cursor/rules`, or
 ## Documentation feedback
 
 If you find documentation in this repository that is broken, incorrect,
-outdated, or incomplete while performing a task, file a structured report
-via the Docs Feedback Protocol. This helps the maintainers fix the docs
-for the next agent (or human) that hits the same issue.
+outdated, or incomplete while performing a task, **offer to file** a
+structured report via the Docs Feedback Protocol so the maintainers can
+fix the docs for the next agent (or human) that hits the same issue.
 
-How to file a report:
+**Ask before sending.** Show the developer the report you would submit
+and send it **only after they confirm** — never file it automatically.
+
+The report to send, once confirmed:
 
     curl -X POST https://hub.fixyourdocs.io/v1/reports \
       -H 'Content-Type: application/json' \
@@ -106,9 +109,11 @@ if available; otherwise POST to `https://hub.fixyourdocs.io/v1/reports`
 per https://docsfeedback.org.
 ````
 
-The difference from Mode A is scope and consent: this block is **global**
-(it travels with you, not a repo) and it tells the agent to **offer** —
-public docs only, with your OK — rather than report silently.
+The difference from Mode A is **scope and guardrails**, not consent — both
+blocks tell the agent to **offer** and wait for your OK before sending.
+This block is **global** (it travels with you, not a repo) and adds the
+third-party rules Mode A doesn't need: public docs only, never your own
+private code or internal pages.
 
 Install it the same way, with `--global`:
 
