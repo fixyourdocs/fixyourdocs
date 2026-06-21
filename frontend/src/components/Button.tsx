@@ -1,7 +1,7 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-type Size = 'sm' | 'md';
+type Size = 'sm' | 'md' | 'lg';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -18,6 +18,7 @@ const variants: Record<Variant, string> = {
 const sizes: Record<Size, string> = {
   sm: 'px-2.5 py-1.5 text-sm rounded-md',
   md: 'px-4 py-2 text-sm rounded-md',
+  lg: 'px-8 py-3.5 text-base rounded-lg',
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(

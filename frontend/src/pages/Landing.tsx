@@ -1,16 +1,11 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
-import { Card, CardBody } from '../components/Card';
 import {
-  CheckCircle2,
-  FileText,
   Play,
   Send,
   Github,
   BookOpen,
-  Package,
-  Sparkles,
+  Bot,
 } from 'lucide-react';
 
 const MCP_CONFIG = `{
@@ -53,12 +48,10 @@ export function Landing() {
     <>
       <Hero />
       <TryIt />
+      <MaintainerSetup />
       <Spec />
-      <SDK />
-      <WhyNow />
       <HowItWorks />
       <ForAgents />
-      <SampleReport />
       <Footer />
     </>
   );
@@ -70,21 +63,22 @@ function Hero() {
       <div className="mx-auto max-w-5xl px-6 pb-16 pt-20 sm:pt-28">
         <div className="max-w-3xl">
           <h1 className="text-4xl font-semibold tracking-tight text-slate-900 sm:text-6xl">
-            When agents hit broken docs, you hear about it.
+            When agents hit broken docs, maintainers hear about it.
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-slate-600">
             An agent reports to FixYourDocs, and FixYourDocs opens an issue in the maintainer's
-            repo. An open protocol, reference SDKs, and a hosted hub.
+            repo. Watch the demo below to see the whole loop in action.
           </p>
         </div>
         <div className="mt-10 max-w-3xl">
-          <DemoEmbed />
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link to="/signup" className="w-full sm:w-auto">
-              <Button className="w-full sm:w-auto">Get started</Button>
-            </Link>
-            <a href="https://docs.fixyourdocs.io/getting-started/" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-              <Button variant="secondary" className="w-full sm:w-auto">Read the docs</Button>
+          <VideoEmbed
+            src="/demo.mp4"
+            poster="/demo-poster.png"
+            ariaLabel="Demo: an AI agent hits a stale LibraryX doc, fixes its own code, and files a structured report that opens a GitHub issue."
+          />
+          <div className="mt-8 flex justify-center">
+            <a href="https://docs.fixyourdocs.io/getting-started/" target="_blank" rel="noopener noreferrer" className="inline-flex">
+              <Button size="lg">Get started</Button>
             </a>
           </div>
         </div>
@@ -93,7 +87,15 @@ function Hero() {
   );
 }
 
-function DemoEmbed() {
+function VideoEmbed({
+  src,
+  poster,
+  ariaLabel,
+}: {
+  src: string;
+  poster?: string;
+  ariaLabel: string;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -108,18 +110,18 @@ function DemoEmbed() {
         <video
           ref={videoRef}
           className="h-full w-full object-contain"
-          poster="/demo-poster.png"
+          poster={poster}
           controls={playing}
           playsInline
           preload="metadata"
           width={1080}
           height={1080}
           onPlay={() => setPlaying(true)}
-          aria-label="Demo: an AI agent hits a stale LibraryX doc, fixes its own code, and files a structured report that opens a GitHub issue."
+          aria-label={ariaLabel}
         >
-          <source src="/demo.mp4" type="video/mp4" />
-          Your browser does not support embedded video. Watch the demo on{' '}
-          <a href="https://fixyourdocs.io/demo.mp4">fixyourdocs.io/demo.mp4</a>.
+          <source src={src} type="video/mp4" />
+          Your browser does not support embedded video. Watch it on{' '}
+          <a href={`https://fixyourdocs.io${src}`}>{`fixyourdocs.io${src}`}</a>.
         </video>
 
         {!playing && (
@@ -183,9 +185,42 @@ function TryIt() {
   );
 }
 
-function Spec() {
+function MaintainerSetup() {
   return (
     <section className="border-y border-slate-200 bg-white py-16">
+      <div className="mx-auto max-w-5xl px-6">
+        <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
+          <Github size={22} className="text-sky-700" /> Receive reports on your own repo
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
+          The other side of the loop: connect your repo, verify you own your docs, and
+          every report against them lands as a GitHub Issue you triage with the tools you
+          already use. This walkthrough takes you through the one-time Hub setup, end to end.
+        </p>
+        <div className="mt-8 max-w-3xl">
+          <VideoEmbed
+            src="/maintainer-setup.mp4"
+            ariaLabel="Walkthrough: a maintainer connects the FixYourDocs GitHub App, verifies their docs domain, and receives a docs-feedback report as a GitHub Issue."
+          />
+          <div className="mt-8 flex justify-center">
+            <a
+              href="https://docs.fixyourdocs.io/hub/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex"
+            >
+              <Button size="lg">Read the Hub guide</Button>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Spec() {
+  return (
+    <section className="bg-slate-50 py-16">
       <div className="mx-auto grid max-w-5xl gap-10 px-6 sm:grid-cols-2">
         <div>
           <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
@@ -218,124 +253,45 @@ function Spec() {
   );
 }
 
-function SDK() {
-  return (
-    <section className="bg-slate-50 py-16">
-      <div className="mx-auto max-w-5xl px-6">
-        <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
-          <Package size={22} className="text-sky-700" /> Reference SDKs
-        </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
-          Apache-2.0 reference clients for the two ecosystems most AI agents already speak. Both ship
-          a <code className="rounded bg-white px-1 py-0.5 text-xs ring-1 ring-slate-200">fixyourdocs</code> CLI
-          for the paste-into-AGENTS.md flow.
-        </p>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
-          <Card>
-            <CardBody>
-              <p className="text-sm font-semibold text-slate-900">Python</p>
-              <pre className="mt-2 overflow-x-auto rounded bg-slate-900 p-3 text-xs leading-relaxed text-slate-100">
-                <code>pip install fixyourdocs</code>
-              </pre>
-              <a
-                href="https://github.com/fixyourdocs/sdk-python"
-                className="mt-3 inline-block text-xs text-sky-700 hover:underline"
-              >
-                fixyourdocs/sdk-python →
-              </a>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody>
-              <p className="text-sm font-semibold text-slate-900">TypeScript</p>
-              <pre className="mt-2 overflow-x-auto rounded bg-slate-900 p-3 text-xs leading-relaxed text-slate-100">
-                <code>npm install @fixyourdocs/sdk</code>
-              </pre>
-              <a
-                href="https://github.com/fixyourdocs/sdk-typescript"
-                className="mt-3 inline-block text-xs text-sky-700 hover:underline"
-              >
-                fixyourdocs/sdk-typescript →
-              </a>
-            </CardBody>
-          </Card>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function WhyNow() {
-  const bullets = [
-    'Agents already read AGENTS.md in 60 000+ repos — a single paste-ready block opens the channel.',
-    'MCP is now standard in Claude, Cursor, Codex, and Devin — a structured report is one tool call.',
-    'No competing open spec exists; whoever defines the shape now sets the default.',
-  ];
-  return (
-    <section className="py-16">
-      <div className="mx-auto max-w-5xl px-6">
-        <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
-          <Sparkles size={22} className="text-sky-700" /> Why now
-        </h2>
-        <ul className="mt-8 grid gap-4 sm:grid-cols-3">
-          {bullets.map((b) => (
-            <li
-              key={b}
-              className="rounded-lg border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-700"
-            >
-              {b}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-6 text-sm text-slate-600">
-          Full argument:{' '}
-          <a
-            href="https://github.com/fixyourdocs/manifesto/blob/main/MANIFESTO.md"
-            className="text-sky-700 hover:underline"
-          >
-            read the manifesto
-          </a>
-          .
-        </p>
-      </div>
-    </section>
-  );
-}
-
 function HowItWorks() {
-  const steps = [
+  const modes = [
     {
       icon: <Github size={20} />,
-      t: 'Connect your docs repo',
-      d: 'Sign up, install the FixYourDocs GitHub App, verify you own your docs, and pick the repo where reports should land.',
+      tag: 'Mode A',
+      t: 'You maintain the docs',
+      d: 'Wire your repo and verify you own your docs. Agents working in your repo offer — with the developer\'s OK — to report your docs, and each report lands as a GitHub Issue you triage.',
     },
     {
-      icon: <Send size={20} />,
-      t: 'Agents file structured reports',
-      d: 'Any MCP-aware agent can call file_doc_feedback when it hits a broken doc — no API keys, rate-limited at source.',
-    },
-    {
-      icon: <CheckCircle2 size={20} />,
-      t: 'Reports land as GitHub Issues',
-      d: "Each report whose doc URL is on docs you've verified you own is forwarded to a GitHub Issue on your connected repo, so you triage it with the tools you already use.",
+      icon: <Bot size={20} />,
+      tag: 'Mode B',
+      t: 'You build with agents',
+      d: "Wire your own agent once, globally. When it consults a third-party public doc and hits a problem, it offers — with your OK — to report it to whoever owns that doc.",
     },
   ];
   return (
     <section className="border-y border-slate-200 bg-white py-16">
       <div className="mx-auto max-w-5xl px-6">
         <h2 className="text-2xl font-semibold tracking-tight text-slate-900">How it works</h2>
-        <ol className="mt-10 grid gap-6 sm:grid-cols-3">
-          {steps.map((s, i) => (
-            <li key={s.t} className="rounded-lg border border-slate-200 bg-white p-6">
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
+          One protocol, two ways to adopt it. Pick the side you're on — many people are on both.
+        </p>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2">
+          {modes.map((m) => (
+            <div key={m.tag} className="rounded-lg border border-slate-200 bg-white p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-50 text-sky-700">{s.icon}</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Step {i + 1}</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-50 text-sky-700">{m.icon}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-sky-700">{m.tag}</span>
               </div>
-              <p className="mt-3 text-base font-semibold text-slate-900">{s.t}</p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.d}</p>
-            </li>
+              <p className="mt-3 text-base font-semibold text-slate-900">{m.t}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{m.d}</p>
+            </div>
           ))}
-        </ol>
+        </div>
+        <p className="mt-6 text-sm leading-relaxed text-slate-600">
+          Either way the same report flows to the doc's owner: the agent files a structured
+          report, the Hub matches its doc URL to a verified owner, and it opens a GitHub Issue.
+          Reports always need a human OK before they're sent.
+        </p>
       </div>
     </section>
   );
@@ -348,17 +304,28 @@ function ForAgents() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">For AI agents</h2>
           <p className="mt-3 text-sm leading-relaxed text-slate-600">
-            Add the FixYourDocs MCP server to your client. It runs locally over stdio via{' '}
-            <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">npx</code> and exposes one tool:{' '}
-            <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">file_doc_feedback</code>. No authentication needed —
-            anonymous submission, rate-limited at the hub.
+            Building with agents? Wire <strong>Mode B</strong> once, globally, so your agent
+            offers to report the broken third-party docs it hits across every project. Add two
+            things to your <em>global</em> agent config:
           </p>
-          <p className="mt-3 text-sm text-slate-600">
-            Install:{' '}
-            <code className="block break-all rounded bg-white p-2 font-mono text-xs ring-1 ring-slate-200">
-              npx -y @fixyourdocs/mcp-server
-            </code>
-          </p>
+          <ol className="mt-4 space-y-3 text-sm leading-relaxed text-slate-600">
+            <li>
+              <span className="font-semibold text-slate-900">1. The consumer-side snippet.</span>{' '}
+              The Mode B AGENTS.md block — public docs only, asks before sending. Install it into
+              your global config (e.g. <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">~/.claude/CLAUDE.md</code>):
+              <code className="mt-2 block break-all rounded bg-white p-2 font-mono text-xs ring-1 ring-slate-200">
+                npx @fixyourdocs/sdk init --global
+              </code>
+            </li>
+            <li>
+              <span className="font-semibold text-slate-900">2. The MCP server.</span>{' '}
+              The recommended carrier — it runs locally over stdio via{' '}
+              <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">npx</code>, exposes{' '}
+              <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">file_doc_feedback</code>, and
+              enforces the consent + public-docs-only guards. No auth — anonymous, rate-limited at
+              the hub. Add it with the config on the right.
+            </li>
+          </ol>
         </div>
         <div className="min-w-0 space-y-4">
           <div>
@@ -383,42 +350,11 @@ function ForAgents() {
   );
 }
 
-function SampleReport() {
-  return (
-    <section className="py-16">
-      <div className="mx-auto max-w-3xl px-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-slate-900">What a report looks like</h2>
-        <p className="mt-2 text-sm text-slate-600">An agent finds a stale screenshot reference. Here's the report they file.</p>
-
-        <Card className="mt-6">
-          <CardBody>
-            <div className="flex items-start gap-3">
-              <FileText size={18} className="mt-0.5 text-slate-400" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-900">Step 4 mentions a "Save and Apply" button that no longer exists</p>
-                <p className="mt-1 truncate text-xs text-slate-500">https://docs.acme.com/sso/setup</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-xs text-slate-500">outdated</span>
-                  <span className="text-xs text-slate-500">3h ago</span>
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
-                  The docs say to click "Save and Apply" after entering the metadata URL, but the current UI only has a single
-                  "Save" button. The user was stuck because they kept looking for "Apply".
-                </p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
-    </section>
-  );
-}
-
 function Footer() {
   return (
     <footer className="border-t border-slate-200 bg-white py-10">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 text-sm text-slate-500">
-        <p>FixYourDocs &middot; V1 &middot; us-east-1</p>
+        <p>FixYourDocs Maciek Stopa</p>
         <nav className="flex items-center gap-4">
           <a
             href="https://docsfeedback.org"
