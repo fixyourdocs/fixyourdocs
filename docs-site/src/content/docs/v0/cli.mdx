@@ -42,8 +42,8 @@ Ships with the [`fixyourdocs`](/v0/sdk/python/) Python package.
 ### Mode A — wire a repo (default)
 
 Adds the canonical [Docs Feedback Protocol](/v0/protocol/) block to your
-repo's agent-instructions file, so agents working in *that repo* report
-*its* docs. It auto-detects `AGENTS.md`, `CLAUDE.md`, `.cursor/rules`, or
+repo's agent-instructions file, so agents working in *that repo* offer to
+report *its* docs — asking you first. It auto-detects `AGENTS.md`, `CLAUDE.md`, `.cursor/rules`, or
 `.github/copilot-instructions.md` and appends to whichever exists (falling
 back to creating `AGENTS.md`). Re-running is a **no-op** when the block is
 already present.
