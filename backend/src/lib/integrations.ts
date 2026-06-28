@@ -2,7 +2,7 @@ import { GetCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables } from './db';
 import { candidateDomains, getDomain } from './domains';
 import { isPagesHost, pagesCandidatePrefixes, pagesClaimKey } from './pages';
-import { isRepoSourceHost, parseRepoUrl, repoClaimKey } from './repos';
+import { isRepoSourceHost, parseRepoUrl, repoKey } from './repos';
 
 export interface Integration {
   userId: string;
@@ -23,10 +23,10 @@ export interface ResolvedTarget {
   issueTemplate: string;
 }
 
-// A repo claim row (Domains table, `kind: 'repo'`). repoOwner/repoName keep
-// original case for the GitHub API; the key is lower-cased.
+// A Repos-table row. repoOwner/repoName keep original case for the GitHub API;
+// the `repo` key is lower-cased.
 interface RepoClaimRow {
-  domain: string;
+  repo: string;
   userId: string;
   status: string;
   repoOwner: string;
@@ -49,7 +49,7 @@ export async function getIntegration(userId: string): Promise<Integration | null
 
 async function getRepoClaim(owner: string, repo: string): Promise<RepoClaimRow | null> {
   const res = await ddb.send(
-    new GetCommand({ TableName: tables.domains, Key: { domain: repoClaimKey(owner, repo) } }),
+    new GetCommand({ TableName: tables.repos, Key: { repo: repoKey(owner, repo) } }),
   );
   const row = res.Item as RepoClaimRow | undefined;
   return row && row.status === 'verified' ? row : null;

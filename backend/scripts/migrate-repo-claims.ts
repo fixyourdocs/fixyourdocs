@@ -1,22 +1,23 @@
 /**
  * One-off, idempotent migration onto the repo-centric model:
- *   1. each `configured` integration → a `repo:<o>/<r>` claim row;
+ *   1. each `configured` integration → a Repos-table claim row;
  *   2. each verified DNS domain with no repo attached → attach the owner's repo.
  * Stored `pages:` rows are left dormant (Pages is now auto-derived). DRY-RUN by
  * default; set APPLY=1 to write. Table names + region come from env:
  *
- *   INTEGRATIONS_TABLE=<name> DOMAINS_TABLE=<name> AWS_REGION=<region> \
- *     [APPLY=1] npx tsx backend/scripts/migrate-repo-claims.ts
+ *   INTEGRATIONS_TABLE=<name> DOMAINS_TABLE=<name> REPOS_TABLE=<name> \
+ *     AWS_REGION=<region> [APPLY=1] npx tsx backend/scripts/migrate-repo-claims.ts
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 const INTEGRATIONS = process.env.INTEGRATIONS_TABLE;
 const DOMAINS = process.env.DOMAINS_TABLE;
+const REPOS = process.env.REPOS_TABLE;
 const APPLY = process.env.APPLY === '1';
 
-if (!INTEGRATIONS || !DOMAINS) {
-  console.error('Set INTEGRATIONS_TABLE and DOMAINS_TABLE env vars.');
+if (!INTEGRATIONS || !DOMAINS || !REPOS) {
+  console.error('Set INTEGRATIONS_TABLE, DOMAINS_TABLE and REPOS_TABLE env vars.');
   process.exit(1);
 }
 
@@ -24,7 +25,7 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
 });
 
-const repoClaimKey = (owner: string, repo: string) => `repo:${owner.toLowerCase()}/${repo.toLowerCase()}`;
+const repoKey = (owner: string, repo: string) => `${owner.toLowerCase()}/${repo.toLowerCase()}`;
 const nowIso = () => new Date().toISOString();
 
 async function scanAll(table: string): Promise<Record<string, any>[]> {
@@ -49,15 +50,13 @@ async function main() {
   // 1. integration → repo claim.
   let claimsCreated = 0;
   for (const i of integrations) {
-    const key = repoClaimKey(i.repoOwner, i.repoName);
+    const key = repoKey(i.repoOwner, i.repoName);
     const item = {
-      domain: key,
+      repo: key,
       userId: i.userId,
       status: 'verified',
-      challengeToken: '',
       createdAt: nowIso(),
       verifiedAt: nowIso(),
-      kind: 'repo',
       repoOwner: i.repoOwner,
       repoName: i.repoName,
       issueTemplate: i.issueTemplate,
@@ -66,10 +65,10 @@ async function main() {
     if (APPLY) {
       try {
         await ddb.send(new PutCommand({
-          TableName: DOMAINS!,
+          TableName: REPOS!,
           Item: item,
-          ConditionExpression: 'attribute_not_exists(#d)',
-          ExpressionAttributeNames: { '#d': 'domain' },
+          ConditionExpression: 'attribute_not_exists(#r)',
+          ExpressionAttributeNames: { '#r': 'repo' },
         }));
         claimsCreated += 1;
       } catch (err) {

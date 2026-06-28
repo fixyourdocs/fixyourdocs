@@ -41,8 +41,7 @@ interface PagesView {
 }
 
 interface RepoView {
-  key: string; // synthetic `repo:<o>/<r>` key (base64url it to Remove)
-  repo: string;
+  repo: string; // '<owner>/<repo>' — also the delete path
   repo_url: string;
   status: string;
   issueTemplate?: string;
@@ -50,15 +49,24 @@ interface RepoView {
   verifiedAt?: string;
 }
 
-// Pages/repo claims share the Domains table via a `kind` marker; a row with no
-// `kind` is a DNS domain.
+// Pages claims share the Domains table via a `kind` marker; a row with no `kind`
+// is a DNS domain. Repo claims live in their own Repos table.
 interface ClaimRow extends DomainRow {
   kind?: string;
   host?: string;
   pathPrefix?: string;
   repoOwner?: string;
   repoName?: string;
+}
+
+interface RepoRow {
+  repo: string;
+  status: string;
+  repoOwner?: string;
+  repoName?: string;
   issueTemplate?: string;
+  createdAt?: string;
+  verifiedAt?: string;
 }
 
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
@@ -79,27 +87,27 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
       }
     : null;
 
-  // Listing a user's domains uses the Domains userId-index. Stay resilient:
-  // this endpoint also serves sign-in verification, so if that query ever
-  // fails (e.g. the index isn't available yet) fall back to an empty list
-  // rather than failing the whole response.
+  // List the user's claims via the Domains + Repos userId-indexes (in parallel).
+  // Stay resilient: this endpoint also serves sign-in verification, so on any
+  // query failure fall back to empty lists rather than failing the response.
   let domains: DomainView[] = [];
   let pages: PagesView[] = [];
   let repos: RepoView[] = [];
+  const listByUser = (table: string) =>
+    ddb.send(new QueryCommand({
+      TableName: table,
+      IndexName: 'userId-index',
+      KeyConditionExpression: 'userId = :u',
+      ExpressionAttributeValues: { ':u': user.sub },
+    }));
   try {
-    const res = await ddb.send(
-      new QueryCommand({
-        TableName: tables.domains,
-        IndexName: 'userId-index',
-        KeyConditionExpression: 'userId = :u',
-        ExpressionAttributeValues: { ':u': user.sub },
-      }),
-    );
-    const rows = (res.Items as ClaimRow[] | undefined) ?? [];
+    const [domRes, repoRes] = await Promise.all([listByUser(tables.domains), listByUser(tables.repos)]);
+    const domRows = (domRes.Items as ClaimRow[] | undefined) ?? [];
+    const repoRows = (repoRes.Items as RepoRow[] | undefined) ?? [];
     const byCreated = (a: { createdAt?: string }, b: { createdAt?: string }) =>
       (a.createdAt ?? '').localeCompare(b.createdAt ?? '');
 
-    domains = rows
+    domains = domRows
       .filter((d) => !d.kind) // a DNS domain carries no kind marker
       .map((d) => ({
         domain: d.domain,
@@ -110,7 +118,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
       }))
       .sort(byCreated);
 
-    pages = rows
+    pages = domRows
       .filter((d) => d.kind === 'pages')
       .map((d) => ({
         key: d.domain,
@@ -122,20 +130,18 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
       }))
       .sort(byCreated);
 
-    repos = rows
-      .filter((d) => d.kind === 'repo')
-      .map((d) => ({
-        key: d.domain,
-        repo: `${d.repoOwner ?? ''}/${d.repoName ?? ''}`,
-        repo_url: repoUrl(d.repoOwner ?? '', d.repoName ?? ''),
-        status: d.status,
-        issueTemplate: d.issueTemplate,
-        createdAt: d.createdAt,
-        verifiedAt: d.verifiedAt,
+    repos = repoRows
+      .map((r) => ({
+        repo: `${r.repoOwner ?? ''}/${r.repoName ?? ''}`,
+        repo_url: repoUrl(r.repoOwner ?? '', r.repoName ?? ''),
+        status: r.status,
+        issueTemplate: r.issueTemplate,
+        createdAt: r.createdAt,
+        verifiedAt: r.verifiedAt,
       }))
       .sort(byCreated);
   } catch (err) {
-    console.log('domains_list_unavailable', { sub: user.sub, err: (err as Error).name });
+    console.log('claims_list_unavailable', { sub: user.sub, err: (err as Error).name });
   }
 
   return ok({ sub: user.sub, email: user.email, integration, domains, pages, repos }, getOrigin(event));

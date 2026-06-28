@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../lib/db', () => ({
   ddb: { send: vi.fn() },
-  tables: { reports: 'r', integrations: 'i', rateLimit: 'rl', domains: 'd', oauthState: 'os', githubLinks: 'gl' },
+  tables: { reports: 'r', integrations: 'i', rateLimit: 'rl', domains: 'd', repos: 'repos', oauthState: 'os', githubLinks: 'gl' },
 }));
 
 import { ddb } from '../lib/db';
@@ -37,7 +37,8 @@ describe('GET /v1/orgs/me', () => {
           { domain: 'acme.io', userId: 'user-1', status: 'verified', challengeToken: 't1', createdAt: '2026-05-28T00:00:00Z', verifiedAt: '2026-05-28T01:00:00Z' },
           { domain: 'docs.example.com', userId: 'user-1', status: 'pending', challengeToken: 't2', createdAt: '2026-05-28T02:00:00Z' },
         ],
-      }); // domains Query
+      }) // domains Query
+      .mockResolvedValueOnce({ Items: [] }); // repos Query
 
     const res = await call();
     expect(res.statusCode).toBe(200);
@@ -56,23 +57,25 @@ describe('GET /v1/orgs/me', () => {
     });
   });
 
-  it('splits userId-index rows into domains / pages / repos by kind', async () => {
+  it('returns domains/pages from the Domains table and repos from the Repos table', async () => {
     sendMock
       .mockResolvedValueOnce({ Item: { userId: 'user-1', status: 'installed', installationId: 42 } })
       .mockResolvedValueOnce({
         Items: [
           { domain: 'acme.io', userId: 'user-1', status: 'verified', challengeToken: 't1', createdAt: '2026-06-01T00:00:00Z' },
           { domain: 'pages:acme.github.io/widgets/', userId: 'user-1', status: 'verified', kind: 'pages', host: 'acme.github.io', pathPrefix: '/widgets/', repoOwner: 'acme', repoName: 'widgets', createdAt: '2026-06-01T01:00:00Z' },
-          { domain: 'repo:acme/widgets', userId: 'user-1', status: 'verified', kind: 'repo', repoOwner: 'Acme', repoName: 'Widgets', issueTemplate: '{summary}', createdAt: '2026-06-01T02:00:00Z' },
         ],
-      });
+      }) // domains Query
+      .mockResolvedValueOnce({
+        Items: [
+          { repo: 'acme/widgets', userId: 'user-1', status: 'verified', repoOwner: 'Acme', repoName: 'Widgets', issueTemplate: '{summary}', createdAt: '2026-06-01T02:00:00Z' },
+        ],
+      }); // repos Query
     const body = JSON.parse((await call()).body);
-    // The repo row must NOT leak into the domains list.
     expect(body.domains.map((d: any) => d.domain)).toEqual(['acme.io']);
     expect(body.pages).toHaveLength(1);
     expect(body.repos).toHaveLength(1);
     expect(body.repos[0]).toMatchObject({
-      key: 'repo:acme/widgets',
       repo: 'Acme/Widgets',
       repo_url: 'https://github.com/Acme/Widgets',
       status: 'verified',
@@ -81,16 +84,18 @@ describe('GET /v1/orgs/me', () => {
   });
 
   it('integration is null when none exists', async () => {
-    sendMock.mockResolvedValueOnce({}).mockResolvedValueOnce({ Items: [] });
+    sendMock.mockResolvedValueOnce({}).mockResolvedValueOnce({ Items: [] }).mockResolvedValueOnce({ Items: [] });
     const body = JSON.parse((await call()).body);
     expect(body.integration).toBeNull();
     expect(body.domains).toEqual([]);
+    expect(body.repos).toEqual([]);
   });
 
-  it('stays up when the domains GSI query throws (resilient → empty list)', async () => {
+  it('stays up when a claims query throws (resilient → empty lists)', async () => {
     sendMock
       .mockResolvedValueOnce({ Item: { userId: 'user-1', status: 'installed', installationId: 7 } })
-      .mockRejectedValueOnce(Object.assign(new Error('no index'), { name: 'ValidationException' }));
+      .mockRejectedValueOnce(Object.assign(new Error('no index'), { name: 'ValidationException' })) // domains query
+      .mockResolvedValueOnce({ Items: [] }); // repos query
     const res = await call();
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);

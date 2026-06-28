@@ -6,12 +6,11 @@ import { ok } from '../../lib/response';
 import { ddb, tables } from '../../lib/db';
 import { normalizeDomain } from '../../lib/domains';
 import { isPagesKey, decodePagesDeleteToken } from '../../lib/pages';
-import { isRepoKey } from '../../lib/repos';
 
-// DELETE /v1/orgs/me/domains/{domain}. Authenticated. Deletes the caller's
-// claim — a DNS domain (has a `.`; canonicalised) or a synthetic pages:/repo:
-// key (sent base64url because it has `/`). The conditional delete is
-// owner-scoped, so a foreign or missing row 404s without leaking existence.
+// DELETE /v1/orgs/me/domains/{domain}. Authenticated. Deletes the caller's DNS
+// domain (has a `.`; canonicalised) or Pages claim (synthetic key, sent
+// base64url because it has `/`). The conditional delete is owner-scoped, so a
+// foreign or missing row 404s without leaking existence.
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
   const user = requireUser(event);
   const param = decodeURIComponent(event.pathParameters?.domain ?? '');
@@ -20,9 +19,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
     domain = normalizeDomain(param);
   } else {
     domain = decodePagesDeleteToken(param);
-    if (!isPagesKey(domain) && !isRepoKey(domain)) {
-      throw new HttpError(400, 'invalid_claim', 'Not a valid claim identifier');
-    }
+    if (!isPagesKey(domain)) throw new HttpError(400, 'invalid_claim', 'Not a valid claim identifier');
   }
 
   try {

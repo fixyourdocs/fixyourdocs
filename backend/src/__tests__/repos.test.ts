@@ -1,12 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  parseRepoUrl,
-  isRepoSourceHost,
-  isRepoKey,
-  repoClaimKey,
-  decodeRepoDeleteToken,
-  repoUrl,
-} from '../lib/repos';
+import { parseRepoUrl, isRepoSourceHost, repoKey, repoUrl } from '../lib/repos';
 
 describe('parseRepoUrl — github.com source URLs', () => {
   it('parses a blob/HEAD file URL', () => {
@@ -78,9 +71,9 @@ describe('parseRepoUrl — rejections', () => {
   });
 });
 
-describe('repo claim key + host/key guards', () => {
-  it('builds a lower-cased synthetic key', () => {
-    expect(repoClaimKey('Acme', 'Widgets')).toBe('repo:acme/widgets');
+describe('repo key + host guard', () => {
+  it('builds a lower-cased <owner>/<repo> key', () => {
+    expect(repoKey('Acme', 'Widgets')).toBe('acme/widgets');
   });
 
   it('isRepoSourceHost is true for github.com and raw, false otherwise', () => {
@@ -88,19 +81,6 @@ describe('repo claim key + host/key guards', () => {
     expect(isRepoSourceHost('raw.githubusercontent.com')).toBe(true);
     expect(isRepoSourceHost('gist.github.com')).toBe(false);
     expect(isRepoSourceHost('acme.github.io')).toBe(false);
-  });
-
-  it('isRepoKey distinguishes a repo claim key from a domain / pages key', () => {
-    expect(isRepoKey('repo:acme/widgets')).toBe(true);
-    expect(isRepoKey('pages:acme.github.io/widgets/')).toBe(false);
-    expect(isRepoKey('acme.com')).toBe(false);
-  });
-
-  it('base64url delete token round-trips the synthetic key', () => {
-    const key = repoClaimKey('acme', 'widgets');
-    const token = Buffer.from(key, 'utf8').toString('base64url');
-    expect(decodeRepoDeleteToken(token)).toBe(key);
-    expect(token).not.toContain('/'); // path-safe for the {domain} route param
   });
 
   it('repoUrl renders the public GitHub URL', () => {

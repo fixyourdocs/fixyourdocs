@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../lib/db', () => ({
   ddb: { send: vi.fn() },
-  tables: { reports: 'r', integrations: 'i', rateLimit: 'rl', domains: 'd' },
+  tables: { reports: 'r', integrations: 'i', rateLimit: 'rl', domains: 'd', repos: 'repos' },
 }));
 
 vi.mock('../lib/github-app', () => ({
@@ -38,20 +38,20 @@ beforeEach(() => {
 });
 
 describe('POST /v1/orgs/me/repos — claim a repo', () => {
-  it('claims a reachable repo and stores a lower-cased repo: key with its template', async () => {
+  it('claims a reachable repo and stores a lower-cased repo key with its template', async () => {
     sendMock
       .mockResolvedValueOnce({ Item: installed }) // getIntegration
       .mockResolvedValueOnce({}); // PutCommand
     const res = await call(authEvent('u1', VALID));
     expect(res.statusCode).toBe(201);
     const body = JSON.parse(res.body);
-    expect(body).toMatchObject({ kind: 'repo', repo: 'Acme/Widgets', status: 'verified' });
+    expect(body).toMatchObject({ repo: 'Acme/Widgets', status: 'verified' });
     expect(body.repo_url).toBe('https://github.com/Acme/Widgets');
 
     expect(tokenMock).toHaveBeenCalledWith(42, 'Widgets');
     const put = sendMock.mock.calls[1][0].input;
-    expect(put.Item.domain).toBe('repo:acme/widgets');
-    expect(put.Item.kind).toBe('repo');
+    expect(put.TableName).toBe('repos');
+    expect(put.Item.repo).toBe('acme/widgets');
     expect(put.Item.repoOwner).toBe('Acme');
     expect(put.Item.issueTemplate).toBe('{summary}\n\n{details}');
     expect(put.ConditionExpression).toContain('attribute_not_exists');
@@ -86,7 +86,7 @@ describe('POST /v1/orgs/me/repos — claim a repo', () => {
     sendMock
       .mockResolvedValueOnce({ Item: installed }) // getIntegration
       .mockRejectedValueOnce(Object.assign(new Error('cond'), { name: 'ConditionalCheckFailedException' })) // Put
-      .mockResolvedValueOnce({ Item: { domain: 'repo:acme/widgets', userId: 'u1' } }) // getDomain
+      .mockResolvedValueOnce({ Item: { repo: 'acme/widgets', userId: 'u1' } }) // GetCommand
       .mockResolvedValueOnce({}); // UpdateCommand (template override)
     const res = await call(authEvent('u1', VALID));
     expect(res.statusCode).toBe(201);
@@ -98,7 +98,7 @@ describe('POST /v1/orgs/me/repos — claim a repo', () => {
     sendMock
       .mockResolvedValueOnce({ Item: installed })
       .mockRejectedValueOnce(Object.assign(new Error('cond'), { name: 'ConditionalCheckFailedException' }))
-      .mockResolvedValueOnce({ Item: { domain: 'repo:acme/widgets', userId: 'someone-else' } });
+      .mockResolvedValueOnce({ Item: { repo: 'acme/widgets', userId: 'someone-else' } });
     const res = await call(authEvent('u1', VALID));
     expect(res.statusCode).toBe(409);
     expect(JSON.parse(res.body).error.code).toBe('repo_taken');

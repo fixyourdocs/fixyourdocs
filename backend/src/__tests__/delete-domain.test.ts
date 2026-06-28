@@ -76,25 +76,11 @@ describe('DELETE /v1/orgs/me/domains/{domain}', () => {
     expect(del.ExpressionAttributeValues).toEqual({ ':sub': 'user-1' });
   });
 
-  it('rejects a token that does not decode to a pages/repo key → 400', async () => {
+  it('rejects a token that does not decode to a pages key → 400', async () => {
     const token = Buffer.from('not-a-claim-key', 'utf8').toString('base64url');
     const res = await call(authEvent(token));
     expect(res.statusCode).toBe(400);
     expect(JSON.parse(res.body).error.code).toBe('invalid_claim');
     expect(sendMock).not.toHaveBeenCalled();
-  });
-
-  // A repo claim key (`repo:<o>/<r>`) shares the same slash problem as a
-  // Pages key, so it rides the same base64url token on the shared DELETE route.
-  it('repo delete: base64url token decodes to the stored repo: key, scoped to sub', async () => {
-    const key = 'repo:acme/widgets';
-    const token = Buffer.from(key, 'utf8').toString('base64url');
-    expect(token).not.toContain('.'); // path-safe: survives the {domain} param
-    sendMock.mockResolvedValueOnce({});
-    const res = await call(authEvent(token));
-    expect(res.statusCode).toBe(200);
-    const del = sendMock.mock.calls[0][0].input;
-    expect(del.Key).toEqual({ domain: key });
-    expect(del.ExpressionAttributeValues).toEqual({ ':sub': 'user-1' });
   });
 });

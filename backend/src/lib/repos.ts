@@ -1,7 +1,5 @@
 // Parse GitHub source URLs (the repo's own files) into (owner, repo, path) and
-// own the synthetic `repo:<owner>/<repo>` claim key. Mirrors lib/pages.ts; the
-// key reuses the Domains table and can't collide with a real domain or a Pages
-// claim.
+// build the Repos-table key (`<owner>/<repo>`, lower-cased).
 
 const OWNER_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38}[a-zA-Z0-9])?$/;
 const REPO_RE = /^[a-zA-Z0-9._-]{1,100}$/;
@@ -11,8 +9,6 @@ const RAW_HOST = 'raw.githubusercontent.com';
 
 // Sub-routes that name a file inside the repo (allowlist; /issues, /pull, /wiki… don't route).
 const FILE_ROUTES = new Set(['blob', 'tree', 'raw']);
-
-export const REPO_KEY_PREFIX = 'repo:';
 
 export interface RepoRef {
   owner: string; // lower-cased
@@ -25,18 +21,9 @@ export function isRepoSourceHost(host: string): boolean {
   return h === GITHUB_HOST || h === RAW_HOST;
 }
 
-export function isRepoKey(key: string): boolean {
-  return key.startsWith(REPO_KEY_PREFIX);
-}
-
 // Lower-cased so a claim is case-stable (GitHub owner/repo are case-insensitive).
-export function repoClaimKey(owner: string, repo: string): string {
-  return `${REPO_KEY_PREFIX}${owner.toLowerCase()}/${repo.toLowerCase()}`;
-}
-
-// The key contains `/`, so it rides the shared DELETE route as a base64url token.
-export function decodeRepoDeleteToken(token: string): string {
-  return Buffer.from(token, 'base64url').toString('utf8');
+export function repoKey(owner: string, repo: string): string {
+  return `${owner.toLowerCase()}/${repo.toLowerCase()}`;
 }
 
 // null for anything that isn't a routable repo-file URL. `?plain=1`/`#Lnn` fall

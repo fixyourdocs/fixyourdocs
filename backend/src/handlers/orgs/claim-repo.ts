@@ -1,5 +1,5 @@
 import type { APIGatewayProxyHandlerV2WithJWTAuthorizer } from 'aws-lambda';
-import { PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { requireUser, getOrigin, HttpError } from '../../lib/auth';
 import { wrapAuth } from '../../lib/wrap';
 import { created } from '../../lib/response';
@@ -9,13 +9,11 @@ import { repoClaimSchema } from '../../lib/validation';
 import { installationToken } from '../../lib/github-app';
 import { renderIssue } from '../../lib/issue-template';
 import { getIntegration } from '../../lib/integrations';
-import { getDomain } from '../../lib/domains';
-import { repoClaimKey, repoUrl } from '../../lib/repos';
+import { repoKey, repoUrl } from '../../lib/repos';
 
 // POST /v1/orgs/me/repos. Authenticated. Claim a repository (with its own Issue
 // template), proven by a repo-scoped token mint exactly as set-integration does.
-// N per user; delete + list reuse the domains route + userId-index. Needs the
-// GitHub-App SSM grant + Domains-table write on its Lambda.
+// N per user. Needs the GitHub-App SSM grant + Repos-table write on its Lambda.
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
   const user = requireUser(event);
 
@@ -48,16 +46,14 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
     throw new HttpError(400, 'repo_not_in_installation', 'The GitHub App is not installed on that repository');
   }
 
-  const key = repoClaimKey(repo_owner, repo_name);
+  const key = repoKey(repo_owner, repo_name);
   const now = nowIso();
   const item = {
-    domain: key,
+    repo: key,
     userId: user.sub,
     status: 'verified',
-    challengeToken: '', // unused; kept for the shared row shape
     createdAt: now,
     verifiedAt: now,
-    kind: 'repo',
     repoOwner: repo_owner, // original case for the GitHub API
     repoName: repo_name,
     issueTemplate: issue_template,
@@ -65,28 +61,28 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
 
   try {
     await ddb.send(new PutCommand({
-      TableName: tables.domains,
+      TableName: tables.repos,
       Item: item,
-      ConditionExpression: 'attribute_not_exists(#d)',
-      ExpressionAttributeNames: { '#d': 'domain' },
+      ConditionExpression: 'attribute_not_exists(#r)',
+      ExpressionAttributeNames: { '#r': 'repo' },
     }));
   } catch (err) {
     if ((err as { name?: string }).name !== 'ConditionalCheckFailedException') throw err;
-    const existing = await getDomain(key);
-    if (!existing || existing.userId !== user.sub) {
+    const existing = await ddb.send(new GetCommand({ TableName: tables.repos, Key: { repo: key } }));
+    if (!existing.Item || existing.Item.userId !== user.sub) {
       throw new HttpError(409, 'repo_taken', 'This repository is already claimed');
     }
     // Same-owner re-claim: update the template (the dashboard edits through this call).
     await ddb.send(new UpdateCommand({
-      TableName: tables.domains,
-      Key: { domain: key },
+      TableName: tables.repos,
+      Key: { repo: key },
       UpdateExpression: 'SET issueTemplate = :t, updatedAt = :u',
       ExpressionAttributeValues: { ':t': issue_template, ':u': now },
     }));
   }
 
   return created(
-    { kind: 'repo', repo: `${repo_owner}/${repo_name}`, repo_url: repoUrl(repo_owner, repo_name), status: 'verified' },
+    { repo: `${repo_owner}/${repo_name}`, repo_url: repoUrl(repo_owner, repo_name), status: 'verified' },
     getOrigin(event),
   );
 });
