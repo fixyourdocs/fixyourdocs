@@ -22,6 +22,10 @@ export interface DomainRow {
   createdAt: string;
   verifiedAt?: string;
   lastCheckedAt?: string;
+  // A verified domain may be attached to a specific claimed repo (repo → many
+  // FQDNs). Absent on un-migrated rows, which fall back to the owner's repo.
+  repoOwner?: string;
+  repoName?: string;
 }
 
 // Canonical form used at BOTH claim time and resolve time, so a host can't
