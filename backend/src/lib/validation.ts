@@ -27,15 +27,6 @@ export type FileReport = z.infer<typeof fileReportSchema>;
 const repoOwnerRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38}[a-zA-Z0-9])?$/;
 const repoNameRegex = /^[a-zA-Z0-9._-]{1,100}$/;
 
-export const integrationCreateSchema = z.object({
-  installation_id: z.coerce.number().int().positive(),
-  repo_owner: z.string().regex(repoOwnerRegex, 'invalid repo owner'),
-  repo_name: z.string().regex(repoNameRegex, 'invalid repo name'),
-  issue_template: z.string().min(1).max(8000),
-});
-
-export type IntegrationCreate = z.infer<typeof integrationCreateSchema>;
-
 // Claim a repository with its own Issue template (installationId comes from the
 // stored integration, not the body).
 export const repoClaimSchema = z.object({

@@ -7,7 +7,7 @@ import { isRepoSourceHost, parseRepoUrl, repoKey } from './repos';
 export interface Integration {
   userId: string;
   installationId: number;
-  status: string; // 'installed' | 'configured' | 'revoked'
+  status: string; // 'installed' | 'revoked'
 }
 
 // What the forwarder needs to file an Issue: installation + repo + template.

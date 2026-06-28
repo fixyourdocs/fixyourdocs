@@ -8,19 +8,14 @@ import { challengeRecord, type DomainRow } from '../../lib/domains';
 import { pagesUrl } from '../../lib/pages';
 import { repoUrl } from '../../lib/repos';
 
-// P0-08 Step 4a/6 — the SPA's settings snapshot. Returns the JWT subject +
-// email (sign-in verification target), the caller's GitHub integration (so the
-// UI knows whether the App is installed/configured and can prefill the repo
-// form), and the domains they've claimed (with the DNS challenge for any still
-// pending verification).
+// The SPA's settings snapshot: the JWT subject + email, the caller's GitHub
+// integration (is the App installed), and their claimed domains + repos (with
+// the DNS challenge for any domain still pending verification).
 
 interface IntegrationView {
   status: string;
   installationId?: number;
   installAccountLogin?: string;
-  repoOwner?: string;
-  repoName?: string;
-  issueTemplate?: string;
 }
 
 interface DomainView {
@@ -81,9 +76,6 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
         status: (i.status as string) ?? 'installed',
         installationId: i.installationId as number | undefined,
         installAccountLogin: i.installAccountLogin as string | undefined,
-        repoOwner: i.repoOwner as string | undefined,
-        repoName: i.repoName as string | undefined,
-        issueTemplate: i.issueTemplate as string | undefined,
       }
     : null;
 

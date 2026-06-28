@@ -30,7 +30,7 @@ describe('GET /v1/orgs/me', () => {
   it('returns sub/email + integration + domains (dns_record only for pending)', async () => {
     sendMock
       .mockResolvedValueOnce({
-        Item: { userId: 'user-1', status: 'configured', installationId: 42, repoOwner: 'o', repoName: 'r', issueTemplate: '{summary}' },
+        Item: { userId: 'user-1', status: 'installed', installationId: 42, installAccountLogin: 'acme' },
       }) // integration Get
       .mockResolvedValueOnce({
         Items: [
@@ -44,7 +44,8 @@ describe('GET /v1/orgs/me', () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
     expect(body.sub).toBe('user-1');
-    expect(body.integration).toMatchObject({ status: 'configured', repoOwner: 'o', repoName: 'r', installationId: 42 });
+    expect(body.integration).toMatchObject({ status: 'installed', installationId: 42, installAccountLogin: 'acme' });
+    expect(body.integration.repoOwner).toBeUndefined();
     expect(body.domains).toHaveLength(2);
     const verified = body.domains.find((d: any) => d.domain === 'acme.io');
     const pending = body.domains.find((d: any) => d.domain === 'docs.example.com');

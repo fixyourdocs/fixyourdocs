@@ -12,8 +12,9 @@ import { getIntegration } from '../../lib/integrations';
 import { repoKey, repoUrl } from '../../lib/repos';
 
 // POST /v1/orgs/me/repos. Authenticated. Claim a repository (with its own Issue
-// template), proven by a repo-scoped token mint exactly as set-integration does.
-// N per user. Needs the GitHub-App SSM grant + Repos-table write on its Lambda.
+// template), proven by a repo-scoped installation-token mint (succeeds iff the
+// App can reach the repo). N per user. Needs the GitHub-App SSM grant +
+// Repos-table write on its Lambda.
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
   const user = requireUser(event);
 

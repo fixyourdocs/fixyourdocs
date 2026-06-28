@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fileReportSchema, integrationCreateSchema, oauthStateSchema } from '../lib/validation';
+import { fileReportSchema, repoClaimSchema, oauthStateSchema } from '../lib/validation';
 
 describe('fileReportSchema', () => {
   it('accepts the canonical v0 envelope', () => {
@@ -78,10 +78,9 @@ describe('fileReportSchema', () => {
   });
 });
 
-describe('integrationCreateSchema', () => {
+describe('repoClaimSchema', () => {
   it('accepts valid GitHub repo coordinates', () => {
-    const result = integrationCreateSchema.safeParse({
-      installation_id: 12345,
+    const result = repoClaimSchema.safeParse({
       repo_owner: 'fixyourdocs',
       repo_name: 'fixyourdocs',
       issue_template: '{summary}\n\n{details}\n\n{doc_url}',
@@ -89,19 +88,8 @@ describe('integrationCreateSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('coerces installation_id from a string', () => {
-    const result = integrationCreateSchema.safeParse({
-      installation_id: '12345',
-      repo_owner: 'fixyourdocs',
-      repo_name: 'fixyourdocs',
-      issue_template: 'x',
-    });
-    expect(result.success).toBe(true);
-  });
-
   it('rejects a repo owner with slashes', () => {
-    const result = integrationCreateSchema.safeParse({
-      installation_id: 1,
+    const result = repoClaimSchema.safeParse({
       repo_owner: 'foo/bar',
       repo_name: 'baz',
       issue_template: 'x',
