@@ -6,7 +6,7 @@ vi.mock('../lib/db', () => ({
 }));
 
 import { ddb } from '../lib/db';
-import { resolveIntegrationForReport, resolveTargetForReport } from '../lib/integrations';
+import { resolveTargetForReport } from '../lib/integrations';
 
 const sendMock = ddb.send as unknown as ReturnType<typeof vi.fn>;
 
@@ -80,49 +80,13 @@ describe('resolveTargetForReport (repo-centric routing)', () => {
     expect(res).toBeNull();
     expect(sendMock).not.toHaveBeenCalled();
   });
-});
 
-describe('resolveIntegrationForReport (legacy single-repo routing)', () => {
-  beforeEach(() => {
-    sendMock.mockReset();
-  });
-
-  it('routes a subdomain of a verified domain to the owner configured integration', async () => {
-    sendMock
-      .mockResolvedValueOnce({}) // domains: docs.example.com — miss
-      .mockResolvedValueOnce({ Item: { domain: 'example.com', userId: 'user-1', status: 'verified' } })
-      .mockResolvedValueOnce(configured('user-1')); // integrations: user-1
-
-    const res = await resolveIntegrationForReport('https://docs.example.com/sso');
-    expect(res).toMatchObject({ userId: 'user-1', status: 'configured', repoName: 'r' });
-  });
-
-  it('returns null when no candidate domain is verified', async () => {
-    sendMock.mockResolvedValue({}); // every getDomain misses
-    const res = await resolveIntegrationForReport('https://docs.nobody.com/x');
-    expect(res).toBeNull();
-  });
-
-  it('returns null when the verified owner has not configured a repo (status installed)', async () => {
-    sendMock
-      .mockResolvedValueOnce({ Item: { domain: 'acme.io', userId: 'user-2', status: 'verified' } })
-      .mockResolvedValueOnce({ Item: { userId: 'user-2', status: 'installed' } });
-    const res = await resolveIntegrationForReport('https://acme.io/docs');
-    expect(res).toBeNull();
-  });
-
-  it('the most-specific verified owner wins over a parent domain', async () => {
+  it('the most-specific verified domain wins over a parent (legacy fallback)', async () => {
     sendMock
       .mockResolvedValueOnce({ Item: { domain: 'docs.example.com', userId: 'sub-owner', status: 'verified' } })
       .mockResolvedValueOnce(configured('sub-owner'));
-    const res = await resolveIntegrationForReport('https://docs.example.com/x');
-    expect(res).toMatchObject({ userId: 'sub-owner' });
+    const res = await resolveTargetForReport('https://docs.example.com/x');
+    expect(res).toMatchObject({ userId: 'sub-owner', repoName: 'r' });
     expect(sendMock).toHaveBeenCalledTimes(2); // never queried example.com
-  });
-
-  it('returns null on an unparseable doc_url (no DB call)', async () => {
-    const res = await resolveIntegrationForReport('not a url');
-    expect(res).toBeNull();
-    expect(sendMock).not.toHaveBeenCalled();
   });
 });

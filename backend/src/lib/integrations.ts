@@ -130,39 +130,3 @@ function legacyTarget(integration: Integration | null): ResolvedTarget | null {
     issueTemplate: integration.issueTemplate,
   };
 }
-
-// Legacy single-repo routing — still wired to the forwarder until the forward
-// path moves to resolveTargetForReport. Removed when the single-repo model goes.
-export async function resolveIntegrationForReport(docUrl: string): Promise<Integration | null> {
-  let url: URL;
-  try {
-    url = new URL(docUrl);
-  } catch {
-    return null;
-  }
-  const host = url.hostname.toLowerCase();
-
-  if (isPagesHost(host)) {
-    return resolvePagesIntegration(host, url.pathname);
-  }
-
-  for (const candidate of candidateDomains(host)) {
-    const dom = await getDomain(candidate);
-    if (dom?.status === 'verified') {
-      const integration = await getIntegration(dom.userId);
-      return integration && integration.status === 'configured' ? integration : null;
-    }
-  }
-  return null;
-}
-
-async function resolvePagesIntegration(host: string, pathname: string): Promise<Integration | null> {
-  for (const prefix of pagesCandidatePrefixes(pathname)) {
-    const row = await getDomain(pagesClaimKey(host, prefix));
-    if (row?.status === 'verified') {
-      const integration = await getIntegration(row.userId);
-      return integration && integration.status === 'configured' ? integration : null;
-    }
-  }
-  return null;
-}
