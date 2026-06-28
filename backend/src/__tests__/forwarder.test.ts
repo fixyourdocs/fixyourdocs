@@ -6,7 +6,7 @@ vi.mock('../lib/db', () => ({
 }));
 
 vi.mock('../lib/integrations', () => ({
-  resolveIntegrationForReport: vi.fn(),
+  resolveTargetForReport: vi.fn(),
 }));
 
 vi.mock('../lib/github-app', () => ({
@@ -19,24 +19,25 @@ vi.mock('../lib/rate-limit', () => ({
 }));
 
 import { ddb } from '../lib/db';
-import { resolveIntegrationForReport } from '../lib/integrations';
+import { resolveTargetForReport } from '../lib/integrations';
 import { installationToken, createIssue } from '../lib/github-app';
 import { checkAndConsume } from '../lib/rate-limit';
 import { handler } from '../handlers/forwarder/forwarder';
 
 const sendMock = ddb.send as unknown as ReturnType<typeof vi.fn>;
-const resolveMock = resolveIntegrationForReport as unknown as ReturnType<typeof vi.fn>;
+const resolveMock = resolveTargetForReport as unknown as ReturnType<typeof vi.fn>;
 const tokenMock = installationToken as unknown as ReturnType<typeof vi.fn>;
 const createIssueMock = createIssue as unknown as ReturnType<typeof vi.fn>;
 const capMock = checkAndConsume as unknown as ReturnType<typeof vi.fn>;
 
-const INTEGRATION = {
+// The forwarder consumes a ResolvedTarget (P1-16): owner + installation + repo
+// + template. (No `status` — that lives on the integration row, not the target.)
+const TARGET = {
   userId: 'user-1',
   installationId: 42,
   repoOwner: 'o',
   repoName: 'docs-sandbox',
   issueTemplate: '**Docs feedback**\n\n{summary}\n\n{details}\n\nSource: {doc_url}',
-  status: 'configured',
 };
 
 const REPORT = {
@@ -54,7 +55,7 @@ function invoke(reportId = 'r-1') {
 
 beforeEach(() => {
   sendMock.mockReset();
-  resolveMock.mockReset().mockResolvedValue(INTEGRATION);
+  resolveMock.mockReset().mockResolvedValue(TARGET);
   tokenMock.mockReset().mockResolvedValue('ghs_test');
   createIssueMock.mockReset().mockResolvedValue({ number: 7, htmlUrl: 'https://github.com/o/r/issues/7' });
   capMock.mockReset().mockResolvedValue(true);
@@ -99,11 +100,11 @@ describe('forwarder', () => {
     expect(createIssueMock).not.toHaveBeenCalled();
   });
 
-  it('posts no Issue when no verified domain matches', async () => {
+  it('posts no Issue when nothing routes (no claim matches)', async () => {
     resolveMock.mockResolvedValueOnce(null);
     sendMock.mockResolvedValueOnce({ Item: { ...REPORT } }); // Get report
     const res = await invoke();
-    expect(res).toEqual({ ok: false, reason: 'no_verified_domain' });
+    expect(res).toEqual({ ok: false, reason: 'no_route' });
     expect(createIssueMock).not.toHaveBeenCalled();
   });
 

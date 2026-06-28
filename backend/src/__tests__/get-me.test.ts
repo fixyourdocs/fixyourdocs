@@ -56,6 +56,30 @@ describe('GET /v1/orgs/me', () => {
     });
   });
 
+  it('splits userId-index rows into domains / pages / repos by kind (P1-16)', async () => {
+    sendMock
+      .mockResolvedValueOnce({ Item: { userId: 'user-1', status: 'installed', installationId: 42 } })
+      .mockResolvedValueOnce({
+        Items: [
+          { domain: 'acme.io', userId: 'user-1', status: 'verified', challengeToken: 't1', createdAt: '2026-06-01T00:00:00Z' },
+          { domain: 'pages:acme.github.io/widgets/', userId: 'user-1', status: 'verified', kind: 'pages', host: 'acme.github.io', pathPrefix: '/widgets/', repoOwner: 'acme', repoName: 'widgets', createdAt: '2026-06-01T01:00:00Z' },
+          { domain: 'repo:acme/widgets', userId: 'user-1', status: 'verified', kind: 'repo', repoOwner: 'Acme', repoName: 'Widgets', issueTemplate: '{summary}', createdAt: '2026-06-01T02:00:00Z' },
+        ],
+      });
+    const body = JSON.parse((await call()).body);
+    // The repo row must NOT leak into the domains list.
+    expect(body.domains.map((d: any) => d.domain)).toEqual(['acme.io']);
+    expect(body.pages).toHaveLength(1);
+    expect(body.repos).toHaveLength(1);
+    expect(body.repos[0]).toMatchObject({
+      key: 'repo:acme/widgets',
+      repo: 'Acme/Widgets',
+      repo_url: 'https://github.com/Acme/Widgets',
+      status: 'verified',
+      issueTemplate: '{summary}',
+    });
+  });
+
   it('integration is null when none exists', async () => {
     sendMock.mockResolvedValueOnce({}).mockResolvedValueOnce({ Items: [] });
     const body = JSON.parse((await call()).body);

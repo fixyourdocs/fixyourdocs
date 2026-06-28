@@ -13,7 +13,7 @@ import {
   isPagesHost,
   isPagesKey,
 } from '../lib/pages';
-import { resolveIntegrationForReport } from '../lib/integrations';
+import { resolveTargetForReport } from '../lib/integrations';
 import { handler as claimHandler } from '../handlers/orgs/claim-domain';
 import { HttpError } from '../lib/auth';
 
@@ -96,7 +96,7 @@ describe('Pages host/key guards', () => {
 // ---------------------------------------------------------------------------
 // Step 3 — routing: longest claimed path-prefix wins, no cross-repo mis-route.
 // ---------------------------------------------------------------------------
-describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', () => {
+describe('resolveTargetForReport — GitHub Pages routing (P0-19 Step 3; P1-16 legacy fallback)', () => {
   const CONFIGURED = {
     userId: 'u1',
     installationId: 1,
@@ -104,6 +104,16 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
     repoName: 'widgets',
     issueTemplate: 't',
     status: 'configured',
+  };
+  // The resolver returns a ResolvedTarget (no `status`), built from the legacy
+  // configured integration when only a stored Pages claim (not a repo claim)
+  // matches.
+  const TARGET = {
+    userId: 'u1',
+    installationId: 1,
+    repoOwner: 'acme',
+    repoName: 'widgets',
+    issueTemplate: 't',
   };
 
   beforeEach(() => sendMock.mockReset());
@@ -124,8 +134,8 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       { [pagesClaimKey('acme.github.io', '/widgets/')]: { userId: 'u1', status: 'verified' } },
       CONFIGURED,
     );
-    const integ = await resolveIntegrationForReport('https://acme.github.io/widgets/page');
-    expect(integ).toEqual(CONFIGURED);
+    const integ = await resolveTargetForReport('https://acme.github.io/widgets/page');
+    expect(integ).toEqual(TARGET);
   });
 
   it('longest-prefix wins: /widgets/ beats a bare / claim', async () => {
@@ -136,7 +146,7 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       },
       CONFIGURED,
     );
-    const integ = await resolveIntegrationForReport('https://acme.github.io/widgets/page');
+    const integ = await resolveTargetForReport('https://acme.github.io/widgets/page');
     expect(integ?.userId).toBe('u1');
   });
 
@@ -146,7 +156,7 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       { [pagesClaimKey('acme.github.io', '/widgets/')]: { userId: 'u1', status: 'verified' } },
       CONFIGURED,
     );
-    const integ = await resolveIntegrationForReport('https://acme.github.io/other/page');
+    const integ = await resolveTargetForReport('https://acme.github.io/other/page');
     expect(integ).toBeNull();
   });
 
@@ -155,7 +165,7 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       { [pagesClaimKey('acme.github.io', '/widgets/')]: { userId: 'u1', status: 'verified' } },
       { ...CONFIGURED, status: 'installed' },
     );
-    expect(await resolveIntegrationForReport('https://acme.github.io/widgets/x')).toBeNull();
+    expect(await resolveTargetForReport('https://acme.github.io/widgets/x')).toBeNull();
   });
 
   it('a custom domain still routes via DNS (candidateDomains), not the Pages path', async () => {
@@ -166,8 +176,8 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       if (key.userId) return Promise.resolve({ Item: CONFIGURED });
       return Promise.resolve({});
     });
-    const integ = await resolveIntegrationForReport('https://docs.acme.com/guide');
-    expect(integ).toEqual(CONFIGURED);
+    const integ = await resolveTargetForReport('https://docs.acme.com/guide');
+    expect(integ).toEqual(TARGET);
   });
 });
 

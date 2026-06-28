@@ -75,7 +75,7 @@ async function claimPages(userId: string, input: string, origin?: string) {
   const claim = resolvePagesClaim(input);
 
   const integration = await getIntegration(userId);
-  if (!integration || integration.status !== 'configured') {
+  if (!integration || integration.status !== 'configured' || !integration.repoOwner || !integration.repoName) {
     throw new HttpError(
       409,
       'integration_required',

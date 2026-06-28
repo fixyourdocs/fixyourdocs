@@ -36,6 +36,17 @@ export const integrationCreateSchema = z.object({
 
 export type IntegrationCreate = z.infer<typeof integrationCreateSchema>;
 
+// P1-16 — claim a repository (the repo-centric anchor) with its own Issue
+// template. The installationId is read from the caller's stored integration
+// (not the body), like set-integration; only the repo + template are supplied.
+export const repoClaimSchema = z.object({
+  repo_owner: z.string().regex(repoOwnerRegex, 'invalid repo owner'),
+  repo_name: z.string().regex(repoNameRegex, 'invalid repo name'),
+  issue_template: z.string().min(1).max(8000),
+});
+
+export type RepoClaim = z.infer<typeof repoClaimSchema>;
+
 export const domainClaimSchema = z.object({
   domain: z.string().min(3).max(253),
 });

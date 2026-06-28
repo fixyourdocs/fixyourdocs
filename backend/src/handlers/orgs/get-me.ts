@@ -6,6 +6,7 @@ import { wrapAuth } from '../../lib/wrap';
 import { ddb, tables } from '../../lib/db';
 import { challengeRecord, type DomainRow } from '../../lib/domains';
 import { pagesUrl } from '../../lib/pages';
+import { repoUrl } from '../../lib/repos';
 
 // P0-08 Step 4a/6 — the SPA's settings snapshot. Returns the JWT subject +
 // email (sign-in verification target), the caller's GitHub integration (so the
@@ -39,14 +40,26 @@ interface PagesView {
   verifiedAt?: string;
 }
 
-// Pages claims share the Domains table with a synthetic `pages:` key + a
-// `kind: 'pages'` marker and extra repo fields (P0-19).
-interface PagesRow extends DomainRow {
+interface RepoView {
+  key: string; // synthetic `repo:<o>/<r>` key (base64url it to Remove)
+  repo: string;
+  repo_url: string;
+  status: string;
+  issueTemplate?: string;
+  createdAt?: string;
+  verifiedAt?: string;
+}
+
+// Pages (P0-19) and repo (P1-16) claims share the Domains table with a synthetic
+// key + a `kind` marker and extra repo fields. A row with no `kind` is a DNS
+// domain.
+interface ClaimRow extends DomainRow {
   kind?: string;
   host?: string;
   pathPrefix?: string;
   repoOwner?: string;
   repoName?: string;
+  issueTemplate?: string;
 }
 
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
@@ -73,6 +86,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
   // rather than failing the whole response.
   let domains: DomainView[] = [];
   let pages: PagesView[] = [];
+  let repos: RepoView[] = [];
   try {
     const res = await ddb.send(
       new QueryCommand({
@@ -82,12 +96,12 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
         ExpressionAttributeValues: { ':u': user.sub },
       }),
     );
-    const rows = (res.Items as PagesRow[] | undefined) ?? [];
+    const rows = (res.Items as ClaimRow[] | undefined) ?? [];
     const byCreated = (a: { createdAt?: string }, b: { createdAt?: string }) =>
       (a.createdAt ?? '').localeCompare(b.createdAt ?? '');
 
     domains = rows
-      .filter((d) => d.kind !== 'pages')
+      .filter((d) => !d.kind) // a DNS domain carries no kind marker
       .map((d) => ({
         domain: d.domain,
         status: d.status,
@@ -108,9 +122,22 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
         verifiedAt: d.verifiedAt,
       }))
       .sort(byCreated);
+
+    repos = rows
+      .filter((d) => d.kind === 'repo')
+      .map((d) => ({
+        key: d.domain,
+        repo: `${d.repoOwner ?? ''}/${d.repoName ?? ''}`,
+        repo_url: repoUrl(d.repoOwner ?? '', d.repoName ?? ''),
+        status: d.status,
+        issueTemplate: d.issueTemplate,
+        createdAt: d.createdAt,
+        verifiedAt: d.verifiedAt,
+      }))
+      .sort(byCreated);
   } catch (err) {
     console.log('domains_list_unavailable', { sub: user.sub, err: (err as Error).name });
   }
 
-  return ok({ sub: user.sub, email: user.email, integration, domains, pages }, getOrigin(event));
+  return ok({ sub: user.sub, email: user.email, integration, domains, pages, repos }, getOrigin(event));
 });
