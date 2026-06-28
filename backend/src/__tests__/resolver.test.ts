@@ -8,7 +8,6 @@ vi.mock('../lib/db', () => ({
 import { ddb } from '../lib/db';
 import { resolveTargetForReport } from '../lib/integrations';
 import { repoKey } from '../lib/repos';
-import { pagesClaimKey } from '../lib/pages';
 
 const sendMock = ddb.send as unknown as ReturnType<typeof vi.fn>;
 
@@ -97,15 +96,6 @@ describe('resolveTargetForReport — GitHub Pages URLs (auto-derived)', () => {
     expect(res?.repoName).toBe('acme.github.io');
   });
 
-  it('falls back to a legacy stored Pages claim when no repo claim matches', async () => {
-    route(
-      { [pagesClaimKey('acme.github.io', '/widgets/')]: { userId: 'u1', status: 'verified' } },
-      { u1: { userId: 'u1', installationId: 42, status: 'configured', repoOwner: 'Acme', repoName: 'Widgets', issueTemplate: 't' } },
-    );
-    const res = await resolveTargetForReport('https://acme.github.io/widgets/page');
-    expect(res).toEqual(target('Acme', 'Widgets'));
-  });
-
   it('returns null for an unclaimed Pages path', async () => {
     route({}, { u1: integration() });
     expect(await resolveTargetForReport('https://acme.github.io/widgets/page')).toBeNull();
@@ -127,13 +117,9 @@ describe('resolveTargetForReport — attached custom domains', () => {
     expect(res).toEqual(target('Acme', 'Docs'));
   });
 
-  it('falls back to the owner legacy single repo for a domain with no repo attached', async () => {
-    route(
-      { 'acme.com': { domain: 'acme.com', userId: 'u1', status: 'verified' } },
-      { u1: { userId: 'u1', installationId: 42, status: 'configured', repoOwner: 'Acme', repoName: 'Site', issueTemplate: 't' } },
-    );
-    const res = await resolveTargetForReport('https://acme.com/docs');
-    expect(res).toEqual(target('Acme', 'Site'));
+  it('returns null for a verified domain with no repo attached', async () => {
+    route({ 'acme.com': { domain: 'acme.com', userId: 'u1', status: 'verified' } }, { u1: integration() });
+    expect(await resolveTargetForReport('https://acme.com/docs')).toBeNull();
   });
 
   it('returns null for an unparseable doc_url with no DB call', async () => {

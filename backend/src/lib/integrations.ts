@@ -1,16 +1,12 @@
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables } from './db';
 import { candidateDomains, getDomain } from './domains';
-import { isPagesHost, pagesCandidatePrefixes, pagesClaimKey } from './pages';
+import { isPagesHost } from './pages';
 import { isRepoSourceHost, parseRepoUrl, repoKey } from './repos';
 
 export interface Integration {
   userId: string;
   installationId: number;
-  // Legacy single-repo fields — optional; only a fallback until a claim is migrated.
-  repoOwner?: string;
-  repoName?: string;
-  issueTemplate?: string;
   status: string; // 'installed' | 'configured' | 'revoked'
 }
 
@@ -34,7 +30,7 @@ interface RepoClaimRow {
   issueTemplate: string;
 }
 
-// A verified domain may point at a specific repo; absent it, the legacy fallback applies.
+// A verified domain points at a specific repo.
 interface DomainRowWithRepo {
   userId: string;
   status: string;
@@ -68,19 +64,6 @@ async function targetFromRepoClaim(claim: RepoClaimRow): Promise<ResolvedTarget 
   };
 }
 
-// Pre-migration fallback: a `configured` single-repo integration is itself a target.
-function legacyTarget(integration: Integration | null): ResolvedTarget | null {
-  if (!integration || integration.status !== 'configured') return null;
-  if (!integration.repoOwner || !integration.repoName || !integration.issueTemplate) return null;
-  return {
-    userId: integration.userId,
-    installationId: integration.installationId,
-    repoOwner: integration.repoOwner,
-    repoName: integration.repoName,
-    issueTemplate: integration.issueTemplate,
-  };
-}
-
 // Resolve a doc_url to the repo it is about by one of three address types
 // (repo-file URL, GitHub Pages URL, attached custom domain) → the same repo
 // claim. No match → null → the forwarder posts nothing.
@@ -104,7 +87,7 @@ export async function resolveTargetForReport(docUrl: string): Promise<ResolvedTa
     return resolvePagesTarget(host, url.pathname);
   }
 
-  // Custom domains — most-specific verified owner wins.
+  // Custom domains — most-specific verified owner wins; route via its attached repo.
   for (const candidate of candidateDomains(host)) {
     const dom = (await getDomain(candidate)) as DomainRowWithRepo | null;
     if (dom?.status === 'verified') {
@@ -112,33 +95,24 @@ export async function resolveTargetForReport(docUrl: string): Promise<ResolvedTa
         const claim = await getRepoClaim(dom.repoOwner, dom.repoName);
         if (claim) return targetFromRepoClaim(claim);
       }
-      return legacyTarget(await getIntegration(dom.userId));
+      return null;
     }
   }
   return null;
 }
 
-// Derive the publishing repo from a *.github.io URL (no Pages claim stored),
-// falling back to a legacy stored Pages claim (longest-prefix wins).
+// Derive the publishing repo from a *.github.io URL and route via its repo claim.
 async function resolvePagesTarget(host: string, pathname: string): Promise<ResolvedTarget | null> {
   const user = host.slice(0, -'.github.io'.length);
   // A single-label <user>.github.io maps to one repo; a CNAME'd sub-host doesn't.
-  if (user && !user.includes('.')) {
-    const segments = pathname.split('/').filter(Boolean);
-    const candidates: Array<[string, string]> = [];
-    if (segments.length >= 1) candidates.push([user, segments[0]!]); // project Pages
-    candidates.push([user, `${user}.github.io`]); // user/org Pages
-    for (const [owner, repo] of candidates) {
-      const claim = await getRepoClaim(owner, repo);
-      if (claim) return targetFromRepoClaim(claim);
-    }
-  }
-
-  for (const prefix of pagesCandidatePrefixes(pathname)) {
-    const row = await getDomain(pagesClaimKey(host, prefix));
-    if (row?.status === 'verified') {
-      return legacyTarget(await getIntegration(row.userId));
-    }
+  if (!user || user.includes('.')) return null;
+  const segments = pathname.split('/').filter(Boolean);
+  const candidates: Array<[string, string]> = [];
+  if (segments.length >= 1) candidates.push([user, segments[0]!]); // project Pages
+  candidates.push([user, `${user}.github.io`]); // user/org Pages
+  for (const [owner, repo] of candidates) {
+    const claim = await getRepoClaim(owner, repo);
+    if (claim) return targetFromRepoClaim(claim);
   }
   return null;
 }
