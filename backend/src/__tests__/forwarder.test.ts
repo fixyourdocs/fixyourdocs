@@ -30,7 +30,7 @@ const tokenMock = installationToken as unknown as ReturnType<typeof vi.fn>;
 const createIssueMock = createIssue as unknown as ReturnType<typeof vi.fn>;
 const capMock = checkAndConsume as unknown as ReturnType<typeof vi.fn>;
 
-// The forwarder consumes a ResolvedTarget (P1-16): owner + installation + repo
+// The forwarder consumes a ResolvedTarget: owner + installation + repo
 // + template. (No `status` — that lives on the integration row, not the target.)
 const TARGET = {
   userId: 'user-1',

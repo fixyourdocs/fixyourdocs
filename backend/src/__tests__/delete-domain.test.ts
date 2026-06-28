@@ -84,7 +84,7 @@ describe('DELETE /v1/orgs/me/domains/{domain}', () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
-  // P1-16 — a repo claim key (`repo:<o>/<r>`) shares the same slash problem as a
+  // A repo claim key (`repo:<o>/<r>`) shares the same slash problem as a
   // Pages key, so it rides the same base64url token on the shared DELETE route.
   it('repo delete: base64url token decodes to the stored repo: key, scoped to sub', async () => {
     const key = 'repo:acme/widgets';

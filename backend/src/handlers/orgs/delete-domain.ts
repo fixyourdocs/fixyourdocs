@@ -8,7 +8,7 @@ import { normalizeDomain } from '../../lib/domains';
 import { isPagesKey, decodePagesDeleteToken } from '../../lib/pages';
 import { isRepoKey } from '../../lib/repos';
 
-// DELETE /v1/orgs/me/domains/{domain} (P0-16; extended P0-19, P1-16).
+// DELETE /v1/orgs/me/domains/{domain}.
 // Authenticated. Hard-deletes the caller's claim (DNS domain — pending or
 // verified — a GitHub Pages claim, or a repo claim). Two handle shapes share
 // this route:

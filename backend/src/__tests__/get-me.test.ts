@@ -56,7 +56,7 @@ describe('GET /v1/orgs/me', () => {
     });
   });
 
-  it('splits userId-index rows into domains / pages / repos by kind (P1-16)', async () => {
+  it('splits userId-index rows into domains / pages / repos by kind', async () => {
     sendMock
       .mockResolvedValueOnce({ Item: { userId: 'user-1', status: 'installed', installationId: 42 } })
       .mockResolvedValueOnce({

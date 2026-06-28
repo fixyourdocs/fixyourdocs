@@ -37,7 +37,7 @@ beforeEach(() => {
   tokenMock.mockReset().mockResolvedValue('ghs_test');
 });
 
-describe('POST /v1/orgs/me/repos — claim a repo (P1-16)', () => {
+describe('POST /v1/orgs/me/repos — claim a repo', () => {
   it('claims a reachable repo and stores a lower-cased repo: key with its template', async () => {
     sendMock
       .mockResolvedValueOnce({ Item: installed }) // getIntegration

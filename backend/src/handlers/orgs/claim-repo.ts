@@ -12,7 +12,7 @@ import { getIntegration } from '../../lib/integrations';
 import { getDomain } from '../../lib/domains';
 import { repoClaimKey, repoUrl } from '../../lib/repos';
 
-// POST /v1/orgs/me/repos (P1-16). Authenticated. Claim a repository as a routing
+// POST /v1/orgs/me/repos. Authenticated. Claim a repository as a routing
 // anchor, with its own Issue template. The claim is PROVEN the same way
 // set-integration proves a repo: a repo-scoped installation-token mint succeeds
 // iff the GitHub App can reach the repo — no new GitHub call, the mint IS the

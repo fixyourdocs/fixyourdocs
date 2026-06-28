@@ -96,7 +96,7 @@ describe('Pages host/key guards', () => {
 // ---------------------------------------------------------------------------
 // Step 3 — routing: longest claimed path-prefix wins, no cross-repo mis-route.
 // ---------------------------------------------------------------------------
-describe('resolveTargetForReport — GitHub Pages routing (P0-19 Step 3; P1-16 legacy fallback)', () => {
+describe('resolveTargetForReport — GitHub Pages routing (legacy fallback)', () => {
   const CONFIGURED = {
     userId: 'u1',
     installationId: 1,

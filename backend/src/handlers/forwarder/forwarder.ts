@@ -37,7 +37,7 @@ export const handler: Handler<ForwarderEvent, { ok: boolean; reason?: string }> 
   }
   if (report.forwardStatus === 'forwarded') return { ok: true, reason: 'already_forwarded' };
 
-  // 2. (6c / P1-16) Repo-centric routing. The report's doc_url resolves to the
+  // 2. Repo-centric routing. The report's doc_url resolves to the
   // repo it is about (repo file, auto-Pages, or attached domain). No claim → no
   // Issue.
   const target = await resolveTargetForReport(report.docUrl as string);
@@ -46,7 +46,7 @@ export const handler: Handler<ForwarderEvent, { ok: boolean; reason?: string }> 
     return { ok: false, reason: 'no_route' };
   }
 
-  // 3. (6f) Per-owner cap. Tunable; ~30 burst, ~12/min sustained.
+  // 3. Per-owner cap. Tunable; ~30 burst, ~12/min sustained.
   const underCap = await checkAndConsume(target.userId, {
     keyPrefix: 'integration', capacity: 30, refillPerSec: 0.2, ttlSeconds: 3600,
   });

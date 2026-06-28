@@ -7,10 +7,10 @@ import { isRepoSourceHost, parseRepoUrl, repoClaimKey } from './repos';
 export interface Integration {
   userId: string;
   installationId: number;
-  // Legacy single-repo fields (P0-08). Kept for back-compat + migration safety:
-  // the repo-centric model (P1-16) stores the repo + its template on a dedicated
-  // claim row instead, so these are optional and only used as a fallback until a
-  // user's existing claim is migrated.
+  // Legacy single-repo fields from the pre-repo-centric model. Kept for back-compat +
+  // migration safety: the repo-centric model stores the repo + its template on a
+  // dedicated claim row instead, so these are optional and only used as a fallback
+  // until a user's existing claim is migrated.
   repoOwner?: string;
   repoName?: string;
   issueTemplate?: string;
@@ -29,7 +29,7 @@ export interface ResolvedTarget {
   issueTemplate: string;
 }
 
-// A repo claim (P1-16): a Domains-table row under the synthetic `repo:<o>/<r>`
+// A repo claim: a Domains-table row under the synthetic `repo:<o>/<r>`
 // key, carrying the per-repo Issue template. Marked `kind: 'repo'`. repoOwner /
 // repoName keep their original case for the GitHub API; the key is lower-cased.
 interface RepoClaimRow {
@@ -41,7 +41,7 @@ interface RepoClaimRow {
   issueTemplate: string;
 }
 
-// A verified domain row (D20) may now point at a specific repo (P1-16). The
+// A verified domain row may now point at a specific repo. The
 // fields are optional so a pre-migration row (no repo attached) still resolves
 // via the legacy single-repo fallback.
 interface DomainRowWithRepo {
@@ -94,12 +94,12 @@ function legacyTarget(integration: Integration | null): ResolvedTarget | null {
   };
 }
 
-// THE routing policy (P1-16). A report's doc_url resolves to the repo it is
+// THE routing policy. A report's doc_url resolves to the repo it is
 // about by one of THREE address types, each landing on the SAME repo claim:
 //   1. repo-file URL: github.com / raw.githubusercontent.com → parse
 //      (owner, repo) → repo claim.
 //   2. GitHub Pages URL: *.github.io → derive the publishing repo → its repo
-//      claim (auto-derived; nothing stored). Legacy stored Pages claims (P0-19)
+//      claim (auto-derived; nothing stored). Legacy stored Pages claims
 //      still resolve until migration drops them.
 //   3. attached custom domain: most-specific verified domain → the repo it
 //      points at; or, pre-migration, the owner's legacy single repo.
@@ -114,7 +114,7 @@ export async function resolveTargetForReport(docUrl: string): Promise<ResolvedTa
   const host = url.hostname.toLowerCase();
 
   // (1) Repo files. github.com is not a Pages host and is DNS-unclaimable, so
-  // before P1-16 it dropped silently; now it routes via the repo claim.
+  // previously it dropped silently; now it routes via the repo claim.
   if (isRepoSourceHost(host)) {
     const ref = parseRepoUrl(docUrl);
     if (!ref) return null;
@@ -145,8 +145,8 @@ export async function resolveTargetForReport(docUrl: string): Promise<ResolvedTa
 
 // Derive the publishing repo from a *.github.io URL and route via its repo
 // claim — <user>.github.io/<repo>/… → <user>/<repo>; <user>.github.io/… →
-// <user>/<user>.github.io. Falls back to a legacy stored Pages claim (P0-19,
-// longest-prefix wins) so existing Pages claims keep routing until migration.
+// <user>/<user>.github.io. Falls back to a legacy stored Pages claim
+// (longest-prefix wins) so existing Pages claims keep routing until migration.
 async function resolvePagesTarget(host: string, pathname: string): Promise<ResolvedTarget | null> {
   const user = host.slice(0, -'.github.io'.length);
   // Only a single-label <user>.github.io maps to one publishing repo; a CNAME'd
@@ -162,7 +162,7 @@ async function resolvePagesTarget(host: string, pathname: string): Promise<Resol
     }
   }
 
-  // Legacy stored Pages claim (P0-19).
+  // Legacy stored Pages claim.
   for (const prefix of pagesCandidatePrefixes(pathname)) {
     const row = await getDomain(pagesClaimKey(host, prefix));
     if (row?.status === 'verified') {

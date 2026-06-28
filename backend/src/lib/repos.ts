@@ -1,4 +1,4 @@
-// Repo-centric routing (P1-16). A report whose doc_url points at a GitHub
+// Repo-centric routing. A report whose doc_url points at a GitHub
 // *source* URL — the repository's own files, not a Pages site and not a custom
 // domain — routes to the claim for that repository. This module parses such
 // URLs into (owner, repo, path) and owns the synthetic storage key +

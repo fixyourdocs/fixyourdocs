@@ -1,12 +1,12 @@
 /**
- * P1-16 one-off migration — fold existing single-repo integrations and verified
+ * One-off migration (repo-centric routing) — fold existing single-repo integrations and verified
  * domains onto the repo-centric model.
  *
  *   1. Each `configured` integration (repoOwner/repoName/issueTemplate) → a
  *      `repo:<o>/<r>` claim row in the Domains table (carrying its template).
  *   2. Each verified DNS domain with no repo attached → `repoOwner/repoName`
  *      set to the owner's configured repo, so it points at that repo claim.
- *   3. GitHub Pages (P0-19 `pages:` rows) are left DORMANT: the resolver now
+ *   3. GitHub Pages (the stored `pages:` rows) are left DORMANT: the resolver now
  *      auto-derives Pages from the repo claim, so stored Pages rows are
  *      redundant (harmless; the legacy fallback still reads them).
  *
