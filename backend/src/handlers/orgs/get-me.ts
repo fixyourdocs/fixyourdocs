@@ -50,9 +50,8 @@ interface RepoView {
   verifiedAt?: string;
 }
 
-// Pages and repo claims share the Domains table with a synthetic
-// key + a `kind` marker and extra repo fields. A row with no `kind` is a DNS
-// domain.
+// Pages/repo claims share the Domains table via a `kind` marker; a row with no
+// `kind` is a DNS domain.
 interface ClaimRow extends DomainRow {
   kind?: string;
   host?: string;

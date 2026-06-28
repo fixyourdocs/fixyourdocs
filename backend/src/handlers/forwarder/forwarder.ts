@@ -37,9 +37,7 @@ export const handler: Handler<ForwarderEvent, { ok: boolean; reason?: string }> 
   }
   if (report.forwardStatus === 'forwarded') return { ok: true, reason: 'already_forwarded' };
 
-  // 2. Repo-centric routing. The report's doc_url resolves to the
-  // repo it is about (repo file, auto-Pages, or attached domain). No claim → no
-  // Issue.
+  // 2. Resolve the doc_url to the repo it's about. No claim → no Issue.
   const target = await resolveTargetForReport(report.docUrl as string);
   if (!target) {
     console.log('no_route', { report_id, docUrl: report.docUrl });

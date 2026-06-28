@@ -12,18 +12,10 @@ import { getIntegration } from '../../lib/integrations';
 import { getDomain } from '../../lib/domains';
 import { repoClaimKey, repoUrl } from '../../lib/repos';
 
-// POST /v1/orgs/me/repos. Authenticated. Claim a repository as a routing
-// anchor, with its own Issue template. The claim is PROVEN the same way
-// set-integration proves a repo: a repo-scoped installation-token mint succeeds
-// iff the GitHub App can reach the repo — no new GitHub call, the mint IS the
-// proof. N claims per user (the existing userId-index lists them; the shared
-// DELETE /v1/orgs/me/domains/{token} route removes them). Claiming a repo also
-// lights up its GitHub Pages routing automatically (auto-derived at resolve
-// time) and lets a verified custom domain be attached to it.
-//
-// This handler mints an installation token, so it MUST be deployed on a Lambda
-// that holds the GitHub-App SSM grant + Domains-table write (the same grants the
-// integrations handler group already has).
+// POST /v1/orgs/me/repos. Authenticated. Claim a repository (with its own Issue
+// template), proven by a repo-scoped token mint exactly as set-integration does.
+// N per user; delete + list reuse the domains route + userId-index. Needs the
+// GitHub-App SSM grant + Domains-table write on its Lambda.
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
   const user = requireUser(event);
 
@@ -40,8 +32,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
   }
   const { repo_owner, repo_name, issue_template } = parsed.data;
 
-  // The installationId comes from the stored integration, never the body — the
-  // body can't re-point a claim at another user's installation.
+  // installationId from the stored integration, never the body.
   const integration = await getIntegration(user.sub);
   if (!integration?.installationId) {
     throw new HttpError(409, 'no_installation', 'Install the GitHub App first');
@@ -50,9 +41,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
   // Reject a template with unknown placeholders before any GitHub call.
   renderIssue(issue_template, { summary: 'preview', details: 'preview', doc_url: 'https://example.com' });
 
-  // Proof of control: a repo-scoped token mint fails if the App can't reach it.
-  // Mint with the supplied case (GitHub matches case-insensitively); the stored
-  // key is lower-cased so routing is case-stable.
+  // Proof of control: the mint fails if the App can't reach the repo.
   try {
     await installationToken(integration.installationId, repo_name);
   } catch {
@@ -62,20 +51,19 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
   const key = repoClaimKey(repo_owner, repo_name);
   const now = nowIso();
   const item = {
-    domain: key, // synthetic PK in the shared Domains table
+    domain: key,
     userId: user.sub,
     status: 'verified',
-    challengeToken: '', // unused for repo claims; kept for the shared row shape
+    challengeToken: '', // unused; kept for the shared row shape
     createdAt: now,
     verifiedAt: now,
     kind: 'repo',
-    repoOwner: repo_owner, // original case for the GitHub API + display
+    repoOwner: repo_owner, // original case for the GitHub API
     repoName: repo_name,
     issueTemplate: issue_template,
   };
 
   try {
-    // One owner per repo; the conditional put serialises concurrent claims.
     await ddb.send(new PutCommand({
       TableName: tables.domains,
       Item: item,
@@ -88,8 +76,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
     if (!existing || existing.userId !== user.sub) {
       throw new HttpError(409, 'repo_taken', 'This repository is already claimed');
     }
-    // Idempotent re-claim by the same owner — apply the template as a per-repo
-    // override (the dashboard edits a claim's template through this same call).
+    // Same-owner re-claim: update the template (the dashboard edits through this call).
     await ddb.send(new UpdateCommand({
       TableName: tables.domains,
       Key: { domain: key },

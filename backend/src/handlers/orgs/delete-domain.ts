@@ -8,19 +8,10 @@ import { normalizeDomain } from '../../lib/domains';
 import { isPagesKey, decodePagesDeleteToken } from '../../lib/pages';
 import { isRepoKey } from '../../lib/repos';
 
-// DELETE /v1/orgs/me/domains/{domain}.
-// Authenticated. Hard-deletes the caller's claim (DNS domain — pending or
-// verified — a GitHub Pages claim, or a repo claim). Two handle shapes share
-// this route:
-//   - a DNS domain — always contains a `.`; normalizeDomain canonicalises it
-//     (casing/IDN) so it can't dodge the owner check by hitting a different key;
-//   - a synthetic claim key (`pages:<host>/<prefix>/` or `repo:<owner>/<repo>`)
-//     contains slashes that can't survive the `{domain}` path param, so the
-//     frontend sends its base64url token instead (no `.`); we decode it back to
-//     the stored key. The decode is generic base64url (decodePagesDeleteToken).
-// The owner check is a conditional delete: a row that isn't yours — or is
-// already gone — fails the condition and returns 404, so we never leak whether
-// some other user owns the claim.
+// DELETE /v1/orgs/me/domains/{domain}. Authenticated. Deletes the caller's
+// claim — a DNS domain (has a `.`; canonicalised) or a synthetic pages:/repo:
+// key (sent base64url because it has `/`). The conditional delete is
+// owner-scoped, so a foreign or missing row 404s without leaking existence.
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async (event) => {
   const user = requireUser(event);
   const param = decodeURIComponent(event.pathParameters?.domain ?? '');

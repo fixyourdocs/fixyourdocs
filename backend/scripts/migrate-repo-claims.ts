@@ -1,26 +1,12 @@
 /**
- * One-off migration (repo-centric routing) — fold existing single-repo integrations and verified
- * domains onto the repo-centric model.
- *
- *   1. Each `configured` integration (repoOwner/repoName/issueTemplate) → a
- *      `repo:<o>/<r>` claim row in the Domains table (carrying its template).
- *   2. Each verified DNS domain with no repo attached → `repoOwner/repoName`
- *      set to the owner's configured repo, so it points at that repo claim.
- *   3. GitHub Pages (the stored `pages:` rows) are left DORMANT: the resolver now
- *      auto-derives Pages from the repo claim, so stored Pages rows are
- *      redundant (harmless; the legacy fallback still reads them).
- *
- * Idempotent: re-running creates nothing new and re-attaches nothing already
- * attached. DRY-RUN by default — set APPLY=1 to actually write.
- *
- * Run from any host/role with read+write on both tables, with the table names
- * and region supplied via env:
+ * One-off, idempotent migration onto the repo-centric model:
+ *   1. each `configured` integration → a `repo:<o>/<r>` claim row;
+ *   2. each verified DNS domain with no repo attached → attach the owner's repo.
+ * Stored `pages:` rows are left dormant (Pages is now auto-derived). DRY-RUN by
+ * default; set APPLY=1 to write. Table names + region come from env:
  *
  *   INTEGRATIONS_TABLE=<name> DOMAINS_TABLE=<name> AWS_REGION=<region> \
- *     npx tsx backend/scripts/migrate-repo-claims.ts          # dry run
- *   ... APPLY=1 npx tsx backend/scripts/migrate-repo-claims.ts # apply
- *
- * No secrets or table ARNs are hard-coded — table names arrive via env.
+ *     [APPLY=1] npx tsx backend/scripts/migrate-repo-claims.ts
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
