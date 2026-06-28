@@ -248,3 +248,38 @@ describe('POST /v1/orgs/me/domains — Pages claim (P0-19 Step 2)', () => {
     expect(JSON.parse(res.body).error.code).toBe('pages_taken');
   });
 });
+
+// A DNS domain may optionally attach to one of the caller's repos so the
+// resolver routes the FQDN to it once verified.
+describe('POST /v1/orgs/me/domains — DNS claim attaching to a repo', () => {
+  beforeEach(() => sendMock.mockReset());
+
+  function authEvent(sub: string, body: unknown): any {
+    return {
+      requestContext: {
+        requestId: 't', http: { method: 'POST', path: '/x', sourceIp: '1.2.3.4' },
+        authorizer: { jwt: { claims: { sub } } },
+      },
+      headers: {},
+      body: JSON.stringify(body),
+    };
+  }
+  const call = (ev: unknown) => (claimHandler as any)(ev, {} as any, () => {});
+
+  it('stores repoOwner/repoName when both are provided', async () => {
+    sendMock.mockResolvedValueOnce({}); // Put
+    const res = await call(authEvent('u1', { domain: 'docs.acme.io', repo_owner: 'acme', repo_name: 'widgets' }));
+    expect(res.statusCode).toBe(201);
+    const put = sendMock.mock.calls[0][0].input;
+    expect(put.Item).toMatchObject({ domain: 'docs.acme.io', status: 'pending', repoOwner: 'acme', repoName: 'widgets' });
+  });
+
+  it('works without a repo (back-compat) — no repo fields stored', async () => {
+    sendMock.mockResolvedValueOnce({});
+    const res = await call(authEvent('u1', { domain: 'acme.io' }));
+    expect(res.statusCode).toBe(201);
+    const put = sendMock.mock.calls[0][0].input;
+    expect(put.Item.repoOwner).toBeUndefined();
+    expect(put.Item.repoName).toBeUndefined();
+  });
+});

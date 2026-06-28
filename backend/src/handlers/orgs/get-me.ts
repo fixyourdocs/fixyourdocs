@@ -6,6 +6,7 @@ import { wrapAuth } from '../../lib/wrap';
 import { ddb, tables } from '../../lib/db';
 import { challengeRecord, type DomainRow } from '../../lib/domains';
 import { pagesUrl } from '../../lib/pages';
+import { repoUrl } from '../../lib/repos';
 
 // P0-08 Step 4a/6 — the SPA's settings snapshot. Returns the JWT subject +
 // email (sign-in verification target), the caller's GitHub integration (so the
@@ -35,6 +36,24 @@ interface PagesView {
   pages_url: string;
   repo: string;
   status: string;
+  createdAt?: string;
+  verifiedAt?: string;
+}
+
+interface RepoView {
+  repo: string; // owner/name
+  repo_url: string;
+  status: string;
+  issueTemplate?: string;
+  createdAt?: string;
+  verifiedAt?: string;
+}
+
+interface RepoRow {
+  repoOwner?: string;
+  repoName?: string;
+  status: string;
+  issueTemplate?: string;
   createdAt?: string;
   verifiedAt?: string;
 }
@@ -112,5 +131,31 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
     console.log('domains_list_unavailable', { sub: user.sub, err: (err as Error).name });
   }
 
-  return ok({ sub: user.sub, email: user.email, integration, domains, pages }, getOrigin(event));
+  // Repo claims (the routing anchor) come from the Repos userId-index. Resilient
+  // like the domains query, since this endpoint also serves sign-in.
+  let repos: RepoView[] = [];
+  try {
+    const res = await ddb.send(
+      new QueryCommand({
+        TableName: tables.repos,
+        IndexName: 'userId-index',
+        KeyConditionExpression: 'userId = :u',
+        ExpressionAttributeValues: { ':u': user.sub },
+      }),
+    );
+    repos = ((res.Items as RepoRow[] | undefined) ?? [])
+      .map((r) => ({
+        repo: `${r.repoOwner ?? ''}/${r.repoName ?? ''}`,
+        repo_url: repoUrl(r.repoOwner ?? '', r.repoName ?? ''),
+        status: r.status,
+        issueTemplate: r.issueTemplate,
+        createdAt: r.createdAt,
+        verifiedAt: r.verifiedAt,
+      }))
+      .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
+  } catch (err) {
+    console.log('repos_list_unavailable', { sub: user.sub, err: (err as Error).name });
+  }
+
+  return ok({ sub: user.sub, email: user.email, integration, domains, pages, repos }, getOrigin(event));
 });
