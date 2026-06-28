@@ -16,7 +16,7 @@ import { HttpError } from './auth';
 
 // Hosts we treat as GitHub Pages. Kept as a list so other public-suffix Pages
 // providers (pages.dev, …) can generalise here later (P0-19 out-of-scope now).
-const PAGES_SUFFIX = '.github.io';
+export const PAGES_SUFFIX = '.github.io';
 
 // GitHub login + repo name shapes (mirrors validation.ts so a claimed segment
 // can't smuggle a path traversal or an over-long value into the routing key).

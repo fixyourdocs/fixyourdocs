@@ -39,12 +39,17 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = wrapAuth(async
   const domain = normalizeDomain(parsed.data.domain);
   assertClaimable(domain); // (S19)
 
+  // Optionally attach the domain to one of the caller's claimed repos so the
+  // resolver routes this FQDN to it once verified. Both fields or neither.
+  const { repo_owner, repo_name } = parsed.data;
+  const attach = repo_owner && repo_name ? { repoOwner: repo_owner, repoName: repo_name } : {};
+
   const token = newChallengeToken();
   try {
     // (S22) conditional put serialises concurrent claims — one owner per domain.
     await ddb.send(new PutCommand({
       TableName: tables.domains,
-      Item: { domain, userId: user.sub, status: 'pending', challengeToken: token, createdAt: nowIso() },
+      Item: { domain, userId: user.sub, status: 'pending', challengeToken: token, createdAt: nowIso(), ...attach },
       ConditionExpression: 'attribute_not_exists(#d)',
       ExpressionAttributeNames: { '#d': 'domain' },
     }));

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { fileReportSchema, integrationCreateSchema, oauthStateSchema } from '../lib/validation';
+import {
+  fileReportSchema, integrationCreateSchema, oauthStateSchema, domainClaimSchema, repoClaimSchema,
+} from '../lib/validation';
 
 describe('fileReportSchema', () => {
   it('accepts the canonical v0 envelope', () => {
@@ -107,6 +109,30 @@ describe('integrationCreateSchema', () => {
       issue_template: 'x',
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('repoClaimSchema', () => {
+  it('accepts owner/repo + template', () => {
+    expect(repoClaimSchema.safeParse({ repo_owner: 'acme', repo_name: 'widgets', issue_template: '{summary}' }).success).toBe(true);
+  });
+  it('rejects an owner with slashes', () => {
+    expect(repoClaimSchema.safeParse({ repo_owner: 'a/b', repo_name: 'widgets', issue_template: 'x' }).success).toBe(false);
+  });
+  it('rejects an empty template', () => {
+    expect(repoClaimSchema.safeParse({ repo_owner: 'acme', repo_name: 'widgets', issue_template: '' }).success).toBe(false);
+  });
+});
+
+describe('domainClaimSchema', () => {
+  it('accepts a bare domain (no repo attachment) — back-compatible', () => {
+    expect(domainClaimSchema.safeParse({ domain: 'acme.io' }).success).toBe(true);
+  });
+  it('accepts a domain with a repo to attach', () => {
+    expect(domainClaimSchema.safeParse({ domain: 'docs.acme.io', repo_owner: 'acme', repo_name: 'widgets' }).success).toBe(true);
+  });
+  it('rejects an invalid repo owner', () => {
+    expect(domainClaimSchema.safeParse({ domain: 'acme.io', repo_owner: 'a/b', repo_name: 'widgets' }).success).toBe(false);
   });
 });
 

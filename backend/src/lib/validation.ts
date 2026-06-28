@@ -36,8 +36,20 @@ export const integrationCreateSchema = z.object({
 
 export type IntegrationCreate = z.infer<typeof integrationCreateSchema>;
 
+// installationId comes from the stored integration, never the body.
+export const repoClaimSchema = z.object({
+  repo_owner: z.string().regex(repoOwnerRegex, 'invalid repo owner'),
+  repo_name: z.string().regex(repoNameRegex, 'invalid repo name'),
+  issue_template: z.string().min(1).max(8000),
+});
+export type RepoClaim = z.infer<typeof repoClaimSchema>;
+
 export const domainClaimSchema = z.object({
   domain: z.string().min(3).max(253),
+  // Optional: attach the domain to one of the caller's claimed repos. Omitted →
+  // back-compatible with the older single-repo flow.
+  repo_owner: z.string().regex(repoOwnerRegex).optional(),
+  repo_name: z.string().regex(repoNameRegex).optional(),
 });
 export type DomainClaim = z.infer<typeof domainClaimSchema>;
 

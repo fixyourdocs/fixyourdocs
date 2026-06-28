@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../lib/db', () => ({
   ddb: { send: vi.fn() },
-  tables: { reports: 'r', integrations: 'i', rateLimit: 'rl', domains: 'd' },
+  tables: { reports: 'r', integrations: 'i', rateLimit: 'rl', domains: 'd', repos: 'repos' },
 }));
 
 import { ddb } from '../lib/db';
@@ -13,7 +13,7 @@ import {
   isPagesHost,
   isPagesKey,
 } from '../lib/pages';
-import { resolveIntegrationForReport } from '../lib/integrations';
+import { resolveTargetForReport } from '../lib/integrations';
 import { handler as claimHandler } from '../handlers/orgs/claim-domain';
 import { HttpError } from '../lib/auth';
 
@@ -96,7 +96,9 @@ describe('Pages host/key guards', () => {
 // ---------------------------------------------------------------------------
 // Step 3 — routing: longest claimed path-prefix wins, no cross-repo mis-route.
 // ---------------------------------------------------------------------------
-describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', () => {
+// With no repo claim yet, a *.github.io report still routes through a stored
+// Pages claim's configured integration (the pre-migration fallback).
+describe('resolveTargetForReport — Pages fallback via a stored claim', () => {
   const CONFIGURED = {
     userId: 'u1',
     installationId: 1,
@@ -105,27 +107,29 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
     issueTemplate: 't',
     status: 'configured',
   };
+  const TARGET = { userId: 'u1', installationId: 1, repoOwner: 'acme', repoName: 'widgets', issueTemplate: 't' };
 
   beforeEach(() => sendMock.mockReset());
 
-  // Route ddb.send by the key it asks for: Pages claim rows live under their
-  // synthetic key; the integration is keyed by userId.
+  // Route ddb.send by the key it asks for: a repo-claim GetItem (Key.repo) always
+  // misses here; Pages claim rows live under their synthetic domain key; the
+  // integration is keyed by userId.
   function routeBy(rows: Record<string, unknown>, integration: unknown) {
     sendMock.mockImplementation((cmd: any) => {
       const key = cmd?.input?.Key ?? {};
       if (typeof key.domain === 'string') return Promise.resolve({ Item: rows[key.domain] });
       if (typeof key.userId === 'string') return Promise.resolve({ Item: integration });
-      return Promise.resolve({});
+      return Promise.resolve({}); // repo-claim miss
     });
   }
 
-  it('routes a project-Pages report to the claimed owner integration', async () => {
+  it('routes a project-Pages report to the claimed owner repo', async () => {
     routeBy(
       { [pagesClaimKey('acme.github.io', '/widgets/')]: { userId: 'u1', status: 'verified' } },
       CONFIGURED,
     );
-    const integ = await resolveIntegrationForReport('https://acme.github.io/widgets/page');
-    expect(integ).toEqual(CONFIGURED);
+    const target = await resolveTargetForReport('https://acme.github.io/widgets/page');
+    expect(target).toEqual(TARGET);
   });
 
   it('longest-prefix wins: /widgets/ beats a bare / claim', async () => {
@@ -136,8 +140,8 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       },
       CONFIGURED,
     );
-    const integ = await resolveIntegrationForReport('https://acme.github.io/widgets/page');
-    expect(integ?.userId).toBe('u1');
+    const target = await resolveTargetForReport('https://acme.github.io/widgets/page');
+    expect(target?.userId).toBe('u1');
   });
 
   it('does NOT mis-route a different repo path under the same <user>.github.io', async () => {
@@ -146,8 +150,8 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       { [pagesClaimKey('acme.github.io', '/widgets/')]: { userId: 'u1', status: 'verified' } },
       CONFIGURED,
     );
-    const integ = await resolveIntegrationForReport('https://acme.github.io/other/page');
-    expect(integ).toBeNull();
+    const target = await resolveTargetForReport('https://acme.github.io/other/page');
+    expect(target).toBeNull();
   });
 
   it('returns null when the matched owner has no configured integration', async () => {
@@ -155,7 +159,7 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       { [pagesClaimKey('acme.github.io', '/widgets/')]: { userId: 'u1', status: 'verified' } },
       { ...CONFIGURED, status: 'installed' },
     );
-    expect(await resolveIntegrationForReport('https://acme.github.io/widgets/x')).toBeNull();
+    expect(await resolveTargetForReport('https://acme.github.io/widgets/x')).toBeNull();
   });
 
   it('a custom domain still routes via DNS (candidateDomains), not the Pages path', async () => {
@@ -166,8 +170,8 @@ describe('resolveIntegrationForReport — GitHub Pages routing (P0-19 Step 3)', 
       if (key.userId) return Promise.resolve({ Item: CONFIGURED });
       return Promise.resolve({});
     });
-    const integ = await resolveIntegrationForReport('https://docs.acme.com/guide');
-    expect(integ).toEqual(CONFIGURED);
+    const target = await resolveTargetForReport('https://docs.acme.com/guide');
+    expect(target).toEqual(TARGET);
   });
 });
 
@@ -242,5 +246,40 @@ describe('POST /v1/orgs/me/domains — Pages claim (P0-19 Step 2)', () => {
     const res = await call(authEvent('u1', 'https://acme.github.io/widgets/'));
     expect(res.statusCode).toBe(409);
     expect(JSON.parse(res.body).error.code).toBe('pages_taken');
+  });
+});
+
+// A DNS domain may optionally attach to one of the caller's repos so the
+// resolver routes the FQDN to it once verified.
+describe('POST /v1/orgs/me/domains — DNS claim attaching to a repo', () => {
+  beforeEach(() => sendMock.mockReset());
+
+  function authEvent(sub: string, body: unknown): any {
+    return {
+      requestContext: {
+        requestId: 't', http: { method: 'POST', path: '/x', sourceIp: '1.2.3.4' },
+        authorizer: { jwt: { claims: { sub } } },
+      },
+      headers: {},
+      body: JSON.stringify(body),
+    };
+  }
+  const call = (ev: unknown) => (claimHandler as any)(ev, {} as any, () => {});
+
+  it('stores repoOwner/repoName when both are provided', async () => {
+    sendMock.mockResolvedValueOnce({}); // Put
+    const res = await call(authEvent('u1', { domain: 'docs.acme.io', repo_owner: 'acme', repo_name: 'widgets' }));
+    expect(res.statusCode).toBe(201);
+    const put = sendMock.mock.calls[0][0].input;
+    expect(put.Item).toMatchObject({ domain: 'docs.acme.io', status: 'pending', repoOwner: 'acme', repoName: 'widgets' });
+  });
+
+  it('works without a repo (back-compat) — no repo fields stored', async () => {
+    sendMock.mockResolvedValueOnce({});
+    const res = await call(authEvent('u1', { domain: 'acme.io' }));
+    expect(res.statusCode).toBe(201);
+    const put = sendMock.mock.calls[0][0].input;
+    expect(put.Item.repoOwner).toBeUndefined();
+    expect(put.Item.repoName).toBeUndefined();
   });
 });
