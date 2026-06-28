@@ -12,6 +12,8 @@ export const tables = {
   rateLimit: process.env.RATE_LIMIT_TABLE!,
   // P0-08 Step 6 — verified-domain routing.
   domains: process.env.DOMAINS_TABLE!,
+  // Repo claims — the routing anchor.
+  repos: process.env.REPOS_TABLE!,
   // P3-08 — "Sign in with GitHub" (CUSTOM_AUTH).
   oauthState: process.env.OAUTH_STATE_TABLE!,
   githubLinks: process.env.GITHUB_LINKS_TABLE!,
